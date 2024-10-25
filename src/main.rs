@@ -2,34 +2,34 @@ use camino::Utf8PathBuf;
 use chrono::{DateTime, Local, TimeZone};
 use clap::{Parser, Subcommand};
 use dirs;
-use jammdb::{Error, DB};
 use log::info;
+use redb::{Database, Error, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::io::{self, Read, Write};
 use std::mem::size_of_val;
+use std::cmp::min;
 
-const TABLE_NAME: &str = "history";
-
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-struct CopiedData {
-    date: DateTime<Local>,
-    data: Vec<u8>,
-}
+const TABLE: TableDefinition<&str, u64> = TableDefinition::new("clipboard");
 
 #[derive(Parser)]
 #[command(name = "clippy")]
 struct Cli {
     #[arg(short, long, default_value = dirs::config_dir().unwrap().join("clippy").join("config").into_os_string())]
     config_path: Utf8PathBuf,
+    
     #[arg(short, long, default_value = dirs::cache_dir().unwrap().join("clippy").join("db").into_os_string())]
     db_path: Utf8PathBuf,
+    
     #[arg(default_value = "100")]
     max_dedupe_search: u32,
+    
     #[arg(default_value = "750")]
     max_items: u32,
+    
     #[arg(default_value = "100")]
     preview_width: u16,
+    
     #[command(subcommand)]
     command: Commands,
 }
@@ -88,33 +88,24 @@ fn store(
         return Ok(());
     }
 
-    let db = DB::open(&db_path)?;
+    let db = Database::create(&db_path)?;
+    let tx = db.begin_write()?;
     {
-        let tx = db.tx(true)?;
-        let table = tx.get_or_create_bucket(TABLE_NAME)?;
-        table.put(Local::now().timestamp().to_le_bytes(), copied.clone())?;
-        tx.commit()?;
+        let mut table = tx.open_table(TABLE)?;
+        
+        table.insert(Local::now().timestamp().to_le_bytes(), copied.clone())?;
+        
+        let dupes = table.iter().take_while(|(_, v)| {v == copied})
+        
+        dupes
+            .rev()
+            .take(min(0, dupes.len() - max_dedupe_search ))
+            .for_each(|(k, _)| {table.remove(k)};
+        
+        table.rev().take(min(0, table.len() - max_items)).for_each(|(k, _)| {table.remove()})
     }
-    {
-        let tx = db.tx(true)?;
-        let table = tx.get_bucket(TABLE_NAME)?;
-        let mut seen = 0;
-
-        table
-            .kv_pairs()
-            .into_iter()
-            .enumerate()
-            .filter(|(i, kv)| {
-                if kv.value() == copied {
-                    seen += 1
-                }
-                *i > max_items as usize || seen >= (max_dedupe_search + 1) as usize
-            })
-            .for_each(|(_, kv)| {
-                table.delete(kv.key()).unwrap();
-            });
-        tx.commit()?;
-    }
+    tx.commit()?;
+    
     Ok(())
 }
 
