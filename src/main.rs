@@ -20,9 +20,9 @@ struct CopiedData {
 #[derive(Parser)]
 #[command(name = "clippy")]
 struct Cli {
-    #[arg(short, long, default_value = dirs::cache_dir().unwrap().join("clippy").join("config").into_os_string())]
+    #[arg(short, long, default_value = dirs::config_dir().unwrap().join("clippy").join("config").into_os_string())]
     config_path: Utf8PathBuf,
-    #[arg(short, long, default_value = dirs::config_dir().unwrap().join("clippy").join("db").into_os_string())]
+    #[arg(short, long, default_value = dirs::cache_dir().unwrap().join("clippy").join("db").into_os_string())]
     db_path: Utf8PathBuf,
     #[arg(default_value = "100")]
     max_dedupe_search: u32,
@@ -42,7 +42,7 @@ enum Commands {
 
 fn main() -> Result<(), Error> {
     let args = Cli::parse();
-
+    println!("Dir: {}", args.db_path);
     match args.command {
         Commands::Store {} => match env::var("CLIPBOARD_STATE").unwrap().as_str() {
             "sensitive" | "clear" => return Ok(()),
@@ -122,14 +122,16 @@ fn list(db_path: &Utf8PathBuf, out: &mut io::Stdout, preview_width: u16) -> Resu
     let db = DB::open(&db_path)?;
     let tx = db.tx(false)?;
 
-    let copied = tx.get_or_create_bucket(TABLE_NAME)?;
+    let copied = tx.get_bucket(TABLE_NAME)?;
     copied
         .kv_pairs()
         .into_iter()
         .take(preview_width as usize)
         .for_each(|kv| {
             let date = Local.timestamp_opt(i64::from_le_bytes(kv.key().try_into().unwrap()), 0);
-            out.write_fmt(format_args!("{date:?}")).unwrap();
+            let data = std::str::from_utf8(kv.value()).unwrap();
+            out.write_fmt(format_args!("{date:?} | {data:?}\n"))
+                .unwrap();
         });
     Ok(())
 }
