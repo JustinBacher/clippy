@@ -1,12 +1,18 @@
+mod cli;
+mod clip;
+mod error;
+mod prelude;
+
 use camino::Utf8PathBuf;
-use chrono::{DateTime, Local, TimeZone};
-use clap::{Parser, Subcommand};
-use dirs;
-use log::info;
-use redb::{Database, Error, ReadableTable, TableDefinition};
-use serde::{Deserialize, Serialize};
+use chrono::Local;
+use chrono_humanize::{Accuracy, HumanTime, Tense};
+use clap::Parser;
+use cli::{Cli, Commands};
+use clip::Clip;
+use prelude::Result;
+use redb::{Database, ReadableTable, TableDefinition};
 use std::env;
-use std::io::{self, Read, Write};
+use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
 use std::mem::size_of_val;
 use std::cmp::min;
 
@@ -41,19 +47,24 @@ enum Commands {
 }
 
 fn main() -> Result<(), Error> {
+const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("clips");
+const MAX_PAYLOAD_SIZE: usize = 5e6 as usize;
+
+fn main() -> Result<()> {
     let args = Cli::parse();
     println!("Dir: {}", args.db_path);
+
     match args.command {
         Commands::Store {} => match env::var("CLIPBOARD_STATE").unwrap().as_str() {
             "sensitive" | "clear" => return Ok(()),
             _ => store(
                 &args.db_path,
-                &mut io::stdin(),
+                &mut stdin(),
                 args.max_dedupe_search,
                 args.max_items,
             )?,
         },
-        Commands::List { .. } => list(&args.db_path, &mut io::stdout(), args.preview_width)?,
+        Commands::List { .. } => list(&args.db_path, &mut stdout(), args.preview_width)?,
     }
 
     Ok(())
@@ -70,59 +81,72 @@ fn trim_ascii_whitespace(x: &[u8]) -> &[u8] {
 
 fn store(
     db_path: &Utf8PathBuf,
-    input: &mut io::Stdin,
-    max_dedupe_search: u32,
-    max_items: u32,
-) -> Result<(), Error> {
-    let mut copied: Vec<u8> = Vec::new();
-    if !input.read_to_end(&mut copied).is_ok() {
-        return Ok(());
-    }
+    input: &mut Stdin,
+    max_dedupe_search: usize,
+    max_items: usize,
+) -> Result<()> {
+    let mut payload = Vec::new();
+    input.read_to_end(&mut payload)?;
 
-    // Do not store larger than 5Mb or empty values
-    if size_of_val(&*copied) > (5.0 * 1e6) as usize {
-        return Ok(());
-    }
-
-    if trim_ascii_whitespace(&copied).len() == 0 {
+    if (size_of_val(&payload) > MAX_PAYLOAD_SIZE) || (trim_ascii_whitespace(&payload).len() == 0) {
         return Ok(());
     }
 
     let db = Database::create(&db_path)?;
+
     let tx = db.begin_write()?;
     {
-        let mut table = tx.open_table(TABLE)?;
-        
-        table.insert(Local::now().timestamp().to_le_bytes(), copied.clone())?;
-        
-        let dupes = table.iter().take_while(|(_, v)| {v == copied})
-        
-        dupes
-            .rev()
-            .take(min(0, dupes.len() - max_dedupe_search ))
-            .for_each(|(k, _)| {table.remove(k)};
-        
-        table.rev().take(min(0, table.len() - max_items)).for_each(|(k, _)| {table.remove()})
+        let table = tx.open_table(TABLE)?;
+
+        let clip = Clip {
+            date: Local::now(),
+            payload: payload.clone(),
+        };
+        table.insert(clip.date.timestamp().to_le_bytes(), clip.into())?;
+
+        let mut cursor = table.kv_pairs();
+
+        cursor
+            .by_ref()
+            .take(max_dedupe_search)
+            .filter(|clip| clip.value() == payload)
+            .for_each(|clip| {
+                table.delete(clip.key()).unwrap();
+            });
+
+        cursor.skip(max_items - max_dedupe_search).for_each(|clip| {
+            table.delete(clip.key()).unwrap();
+        })
     }
     tx.commit()?;
-    
+
     Ok(())
 }
 
-fn list(db_path: &Utf8PathBuf, out: &mut io::Stdout, preview_width: u16) -> Result<(), Error> {
+fn list(db_path: &Utf8PathBuf, out: &mut Stdout, preview_width: usize) -> Result<()> {
     let db = DB::open(&db_path)?;
     let tx = db.tx(false)?;
 
-    let copied = tx.get_bucket(TABLE_NAME)?;
-    copied
-        .kv_pairs()
-        .into_iter()
-        .take(preview_width as usize)
-        .for_each(|kv| {
-            let date = Local.timestamp_opt(i64::from_le_bytes(kv.key().try_into().unwrap()), 0);
-            let data = std::str::from_utf8(kv.value()).unwrap();
-            out.write_fmt(format_args!("{date:?} | {data:?}\n"))
+    {
+        let table = tx.get_bucket(TABLE_NAME)?;
+        let count = table.kv_pairs().count();
+
+        table
+            .kv_pairs()
+            .take(preview_width)
+            .enumerate()
+            .for_each(|(i, kv)| {
+                let clip = Clip::from(kv.value());
+                out.write_fmt(format_args!(
+                    "{}. {}:\t{}\n",
+                    count - i,
+                    HumanTime::from(clip.date)
+                        .to_text_en(Accuracy::Rough, Tense::Past)
+                        .to_string(),
+                    std::str::from_utf8(&clip.payload).unwrap().to_string()
+                ))
                 .unwrap();
-        });
+            });
+    }
     Ok(())
 }
