@@ -1,62 +1,27 @@
 mod cli;
-mod clip;
 mod error;
 mod prelude;
+mod utils;
 
 use camino::Utf8PathBuf;
-use chrono::Local;
-use chrono_humanize::{Accuracy, HumanTime, Tense};
+use chrono::{DateTime, Local};
 use clap::Parser;
 use cli::{Cli, Commands};
-use clip::Clip;
 use prelude::Result;
 use redb::{Database, ReadableTable, TableDefinition};
+use std::cell::RefCell;
 use std::env;
 use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
-use std::mem::size_of_val;
-use std::cmp::min;
+use utils::trim_ascii_whitespace;
 
-const TABLE: TableDefinition<&str, u64> = TableDefinition::new("clipboard");
-
-#[derive(Parser)]
-#[command(name = "clippy")]
-struct Cli {
-    #[arg(short, long, default_value = dirs::config_dir().unwrap().join("clippy").join("config").into_os_string())]
-    config_path: Utf8PathBuf,
-    
-    #[arg(short, long, default_value = dirs::cache_dir().unwrap().join("clippy").join("db").into_os_string())]
-    db_path: Utf8PathBuf,
-    
-    #[arg(default_value = "100")]
-    max_dedupe_search: u32,
-    
-    #[arg(default_value = "750")]
-    max_items: u32,
-    
-    #[arg(default_value = "100")]
-    preview_width: u16,
-    
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Store {},
-    List { include_dates: String },
-}
-
-fn main() -> Result<(), Error> {
-const TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("clips");
+const TABLE: TableDefinition<i64, Vec<u8>> = TableDefinition::new("clips");
 const MAX_PAYLOAD_SIZE: usize = 5e6 as usize;
 
 fn main() -> Result<()> {
     let args = Cli::parse();
-    println!("Dir: {}", args.db_path);
-
     match args.command {
         Commands::Store {} => match env::var("CLIPBOARD_STATE").unwrap().as_str() {
-            "sensitive" | "clear" => return Ok(()),
+            "sensitive" | "clear" => (),
             _ => store(
                 &args.db_path,
                 &mut stdin(),
@@ -64,19 +29,15 @@ fn main() -> Result<()> {
                 args.max_items,
             )?,
         },
-        Commands::List { .. } => list(&args.db_path, &mut stdout(), args.preview_width)?,
+        Commands::List { include_dates } => list(
+            &args.db_path,
+            &mut stdout(),
+            args.preview_width,
+            include_dates.unwrap(),
+        )?,
     }
 
     Ok(())
-}
-
-fn trim_ascii_whitespace(x: &[u8]) -> &[u8] {
-    let from = match x.iter().position(|x| !x.is_ascii_whitespace()) {
-        Some(i) => i,
-        None => return &x[0..0],
-    };
-    let to = x.iter().rposition(|x| !x.is_ascii_whitespace()).unwrap();
-    &x[from..=to]
 }
 
 fn store(
@@ -88,65 +49,82 @@ fn store(
     let mut payload = Vec::new();
     input.read_to_end(&mut payload)?;
 
-    if (size_of_val(&payload) > MAX_PAYLOAD_SIZE) || (trim_ascii_whitespace(&payload).len() == 0) {
+    if std::mem::size_of_val(&payload) > MAX_PAYLOAD_SIZE
+        || trim_ascii_whitespace(&payload).len() == 0
+    {
         return Ok(());
     }
 
     let db = Database::create(&db_path)?;
-
     let tx = db.begin_write()?;
     {
-        let table = tx.open_table(TABLE)?;
+        let table = RefCell::new(tx.open_table(TABLE)?);
 
-        let clip = Clip {
-            date: Local::now(),
-            payload: payload.clone(),
-        };
-        table.insert(clip.date.timestamp().to_le_bytes(), clip.into())?;
+        table
+            .borrow_mut()
+            .insert(Local::now().timestamp_millis(), payload.to_owned())?;
 
-        let mut cursor = table.kv_pairs();
-
-        cursor
-            .by_ref()
+        table
+            .borrow()
+            .iter()?
+            .rev()
             .take(max_dedupe_search)
-            .filter(|clip| clip.value() == payload)
-            .for_each(|clip| {
-                table.delete(clip.key()).unwrap();
+            .filter(|entry| entry.as_ref().unwrap().1.value() == payload)
+            .for_each(|entry| {
+                table.borrow_mut().remove(entry.unwrap().0.value()).unwrap();
             });
 
-        cursor.skip(max_items - max_dedupe_search).for_each(|clip| {
-            table.delete(clip.key()).unwrap();
-        })
+        table
+            .borrow()
+            .iter()?
+            .by_ref()
+            .skip(max_items - max_dedupe_search)
+            .for_each(|entry| {
+                table.borrow_mut().remove(entry.unwrap().0.value()).unwrap();
+            });
     }
     tx.commit()?;
 
     Ok(())
 }
 
-fn list(db_path: &Utf8PathBuf, out: &mut Stdout, preview_width: usize) -> Result<()> {
-    let db = DB::open(&db_path)?;
-    let tx = db.tx(false)?;
+fn list(
+    db_path: &Utf8PathBuf,
+    out: &mut Stdout,
+    preview_width: usize,
+    include_dates: bool,
+) -> Result<()> {
+    let db = Database::create(&db_path)?;
+
+    let tx = db.begin_read()?;
 
     {
-        let table = tx.get_bucket(TABLE_NAME)?;
-        let count = table.kv_pairs().count();
+        let table = tx.open_table(TABLE)?;
+        let count = table.iter()?.count();
 
         table
-            .kv_pairs()
+            .iter()?
             .take(preview_width)
             .enumerate()
-            .for_each(|(i, kv)| {
-                let clip = Clip::from(kv.value());
-                out.write_fmt(format_args!(
-                    "{}. {}:\t{}\n",
-                    count - i,
-                    HumanTime::from(clip.date)
-                        .to_text_en(Accuracy::Rough, Tense::Past)
-                        .to_string(),
-                    std::str::from_utf8(&clip.payload).unwrap().to_string()
-                ))
+            .for_each(|(i, entry)| {
+                let (date, payload) = entry.unwrap();
+                let copied = String::from_utf8(payload.value()).unwrap();
+                let pretty_date = DateTime::from_timestamp_millis(date.value())
+                    .unwrap()
+                    .format("%c");
+
+                match include_dates {
+                    true => out.write_fmt(format_args!(
+                        "{}. {}:\t{}\n",
+                        count - i,
+                        pretty_date,
+                        copied,
+                    )),
+                    false => out.write_fmt(format_args!("{}. {}\n", count - i, copied)),
+                }
                 .unwrap();
             });
     }
+
     Ok(())
 }

@@ -28,7 +28,7 @@ pub struct Cli {
 pub enum Commands {
     Store {},
     List {
-        #[arg(default_value = "true")]
+        #[arg(default_value = "false")]
         include_dates: Option<bool>,
     },
 }
