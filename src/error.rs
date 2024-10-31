@@ -2,6 +2,14 @@ use anyhow;
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 use thiserror;
 
+enum DBError {
+    CommitError,
+    DatabaseError,
+    StorageError,
+    TableError,
+    TransactionError,
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[allow(dead_code)]
@@ -12,20 +20,8 @@ pub enum Error {
     IO(#[from] std::io::Error),
 
     #[error("Database Error")]
-    DB(#[from] DatabaseError),
+    DB(#[from] DBError),
 
-    #[error("Error during database transation")]
-    TX(#[from] TransactionError),
-
-    #[error("Database Error")]
-    TBL(#[from] TableError),
-
-    #[error("Database Error")]
-    CM(#[from] CommitError),
-
-    #[error("Database Error")]
-    ST(#[from] StorageError),
-
-    #[error("Error Occured")]
-    Other(#[from] anyhow::Error),
+    #[error("Unexpected error occured")]
+    Unknown,
 }
