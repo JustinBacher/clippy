@@ -1,39 +1,34 @@
 use crate::prelude::*;
 use camino::Utf8PathBuf;
-use itertools::{Either, Itertools};
-use redb::{Database, ReadableTable, TableDefinition};
+use itertools::{multiunzip, Either, Itertools, MultiUnzip};
+use redb::{AccessGuard, Database, Key, Range, ReadableTable, TableDefinition, Value};
 use std::{
+    cell::RefCell,
     cmp::Ordering::{Equal, Greater, Less},
     iter::{Rev, Take},
 };
 
 pub const TABLE_DEF: TableDefinition<i64, Vec<u8>> = TableDefinition::new("clips");
 
-type Reversible<T> = Either<Rev<T>, T>;
-type CanTake<T> = Either<Take<Reversible<T>>, Reversible<T>>;
+type Reversible<T> = Either<Take<Rev<T>>, Take<T>>;
 
-pub fn remove_duplicates(db_path: &Utf8PathBuf, duplicates: i32) -> Result<()> {
+pub fn remove_duplicates(db_path: &Utf8PathBuf, duplicates: i32, max: usize) -> Result<()> {
     let db = Database::open(&db_path)?;
-    let read_tx = db.begin_write()?;
     let write_tx = db.begin_write()?;
 
     {
-        let read_table = read_tx.open_table(TABLE_DEF)?;
-        let mut write_table = write_tx.open_table(TABLE_DEF)?;
-        let dupes = duplicates.cmp(&0);
+        let table = RefCell::new(write_tx.open_table(TABLE_DEF)?);
+        let read_table = table.borrow();
+        let cursor = read_table.iter()?;
 
-        let cursor = match dupes {
-            Greater => Reversible::Left(read_table.iter()?.rev()),
-            Less | Equal => Reversible::Right(read_table.iter()?),
-        };
-
-        match dupes {
-            Equal => CanTake::Right(cursor),
-            _ => CanTake::Left(cursor.take(duplicates as usize)),
+        match duplicates.cmp(&0) {
+            Greater => Reversible::Left(cursor.rev().take(duplicates as usize)),
+            Less => Reversible::Right(cursor.take(duplicates as usize)),
+            Equal => Reversible::Right(cursor.take(max)),
         }
         .duplicates_by(|entry| entry.as_ref().unwrap().1.value())
         .for_each(|entry| {
-            write_table.remove(entry.unwrap().0.value()).unwrap();
+            table.borrow_mut().remove(entry.unwrap().0.value()).unwrap();
         });
     }
 

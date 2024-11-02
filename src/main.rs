@@ -10,10 +10,11 @@ use cli::{Cli, Commands};
 use prelude::*;
 use redb::{Database, ReadableTable};
 use std::{
+    cell::RefCell,
     env,
     io::{stdin, stdout, Read, Stdin, Stdout, Write},
 };
-use utils::database::{remove_duplicates, TABLE};
+use utils::database::{remove_duplicates, TABLE_DEF};
 use utils::formatting::*;
 
 const MAX_PAYLOAD_SIZE: usize = 5e6 as usize;
@@ -26,15 +27,15 @@ fn main() -> Result<()> {
             _ => {
                 let db_path = args.db_path;
                 store(&db_path, &mut stdin())?;
-                remove_duplicates(&db_path, args.duplicates)?;
+                remove_duplicates(&db_path, args.duplicates, args.keep)?;
             }
         },
-        Commands::List { include_dates } => list(
-            &args.db_path,
-            &mut stdout(),
-            args.preview_width,
-            include_dates.unwrap(),
-        )?,
+        Commands::List {
+            exclude_dates,
+            preview_width,
+        } => list(&args.db_path, &mut stdout(), preview_width, exclude_dates)?,
+        Commands::Wipe {} => wipe(&args.db_path)?,
+        Commands::Remove {} => todo!(),
     }
 
     Ok(())
@@ -51,7 +52,7 @@ fn store(db_path: &Utf8PathBuf, input: &mut Stdin) -> Result<()> {
     let db = Database::create(&db_path)?;
     let tx = db.begin_write()?;
     {
-        let mut table = tx.open_table(TABLE)?;
+        let mut table = tx.open_table(TABLE_DEF)?;
         table.insert(Local::now().timestamp_millis(), payload.to_owned())?;
     }
     tx.commit()?;
@@ -63,7 +64,7 @@ fn list(db_path: &Utf8PathBuf, out: &mut Stdout, width: usize, include_dates: bo
     let db = Database::create(&db_path)?;
     let tx = db.begin_read()?;
     {
-        let table = tx.open_table(TABLE)?;
+        let table = tx.open_table(TABLE_DEF)?;
         let count = table.iter()?.count();
 
         table.iter()?.enumerate().for_each(|(i, entry)| {
@@ -77,5 +78,19 @@ fn list(db_path: &Utf8PathBuf, out: &mut Stdout, width: usize, include_dates: bo
         });
     }
 
+    Ok(())
+}
+
+fn wipe(db_path: &Utf8PathBuf) -> Result<()> {
+    let db = Database::open(db_path)?;
+    let tx = db.begin_write()?;
+    {
+        let table = RefCell::new(tx.open_table(TABLE_DEF)?);
+
+        table.borrow().iter()?.for_each(|entry| {
+            table.borrow_mut().remove(entry.unwrap().0.value()).unwrap();
+        });
+    }
+    tx.commit()?;
     Ok(())
 }

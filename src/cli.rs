@@ -30,10 +30,12 @@ pub struct Cli {
 pub enum Commands {
     Store {},
     List {
-        #[arg(short('d'), long)]
+        #[arg(short('d'), long, action)]
         /// Disables outputting the dates clips were taken in the output
         exclude_dates: bool,
         #[arg(short('w'), long, default_value = "100")]
         preview_width: usize,
     },
+    Wipe {},
+    Remove {},
 }
