@@ -216,6 +216,7 @@ dependencies = [
  "chrono-humanize",
  "clap",
  "dirs",
+ "either",
  "fake",
  "itertools",
  "jammdb",

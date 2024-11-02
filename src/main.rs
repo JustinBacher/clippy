@@ -4,16 +4,17 @@ mod prelude;
 mod utils;
 
 use camino::Utf8PathBuf;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use clap::Parser;
 use cli::{Cli, Commands};
-use prelude::Result;
-use redb::{AccessGuard, Database, ReadableTable, TableDefinition};
-use std::cell::RefCell;
-use std::env;
-use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
-use utils::database::{drop, remove_duplicates, TABLE};
-use utils::text::{trim, truncate};
+use prelude::*;
+use redb::{Database, ReadableTable};
+use std::{
+    env,
+    io::{stdin, stdout, Read, Stdin, Stdout, Write},
+};
+use utils::database::{remove_duplicates, TABLE};
+use utils::formatting::*;
 
 const MAX_PAYLOAD_SIZE: usize = 5e6 as usize;
 
@@ -22,7 +23,11 @@ fn main() -> Result<()> {
     match args.command {
         Commands::Store {} => match env::var("CLIPBOARD_STATE").unwrap().as_str() {
             "sensitive" | "clear" => (),
-            _ => store(&args.db_path, &mut stdin(), args.duplicates, args.keep)?,
+            _ => {
+                let db_path = args.db_path;
+                store(&db_path, &mut stdin())?;
+                remove_duplicates(&db_path, args.duplicates)?;
+            }
         },
         Commands::List { include_dates } => list(
             &args.db_path,
@@ -35,7 +40,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn store(db_path: &Utf8PathBuf, input: &mut Stdin, dupes: i32, max_items: usize) -> Result<()> {
+fn store(db_path: &Utf8PathBuf, input: &mut Stdin) -> Result<()> {
     let mut payload = Vec::new();
     input.read_to_end(&mut payload)?;
 
@@ -46,31 +51,12 @@ fn store(db_path: &Utf8PathBuf, input: &mut Stdin, dupes: i32, max_items: usize)
     let db = Database::create(&db_path)?;
     let tx = db.begin_write()?;
     {
-        let table = RefCell::new(tx.open_table(TABLE)?);
-
-        table
-            .borrow_mut()
-            .insert(Local::now().timestamp_millis(), payload.to_owned())?;
-
-        remove_duplicates(&table.borrow(), table.borrow().iter()?, payload, dupes);
-
-        table.borrow().iter()?.skip(max_items).for_each(|entry| {
-            drop(&table, entry.unwrap()).unwrap();
-        });
+        let mut table = tx.open_table(TABLE)?;
+        table.insert(Local::now().timestamp_millis(), payload.to_owned())?;
     }
     tx.commit()?;
 
     Ok(())
-}
-
-fn format_entry(entry: (AccessGuard<i64>, AccessGuard<Vec<u8>>), width: usize) -> (String, String) {
-    (
-        DateTime::from_timestamp_millis(entry.0.value())
-            .unwrap()
-            .format("%c")
-            .to_string(),
-        truncate(String::from_utf8(trim(&entry.1.value())).unwrap(), width),
-    )
 }
 
 fn list(db_path: &Utf8PathBuf, out: &mut Stdout, width: usize, include_dates: bool) -> Result<()> {

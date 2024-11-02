@@ -1,2 +1,2 @@
 pub mod database;
-pub mod text;
+pub mod formatting;
