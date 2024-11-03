@@ -11,7 +11,6 @@ use prelude::*;
 use redb::{Database, ReadableTable};
 use std::{
     cell::RefCell,
-    env,
     io::{stdin, stdout, Read, Stdin, Stdout, Write},
 };
 use utils::database::{remove_duplicates, TABLE_DEF};
@@ -22,7 +21,7 @@ const MAX_PAYLOAD_SIZE: usize = 5e6 as usize;
 fn main() -> Result<()> {
     let args = Cli::parse();
     match args.command {
-        Commands::Store {} => match env::var("CLIPBOARD_STATE").unwrap().as_str() {
+        Commands::Store { state } => match state.as_str() {
             "sensitive" | "clear" => (),
             _ => {
                 let db_path = args.db_path;

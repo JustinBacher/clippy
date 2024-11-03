@@ -25,6 +25,7 @@ pub enum Error {
     #[error("Database error occured")]
     DBTrans(#[from] TransactionError),
 
+    #[allow(dead_code)]
     #[error("Unexpected error occured")]
     Unknown,
 }

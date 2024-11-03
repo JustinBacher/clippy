@@ -1,6 +1,5 @@
 use camino::Utf8PathBuf;
-use clap::{Parser, Subcommand};
-use dirs;
+use clap::{ArgAction, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "clippy")]
@@ -9,7 +8,7 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 
-    #[arg(short, long("db"), default_value = dirs::cache_dir().unwrap().join("clippy").join("db").into_os_string())]
+    #[arg(short, long("db"), default_value = "$XDG_CACHE_DIR/clippy/db")]
     /// Path to the local database used to store previous clips
     pub db_path: Utf8PathBuf,
 
@@ -28,7 +27,10 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    Store {},
+    Store {
+        #[arg(env("CLIPBOARD_STATE"), hide_env_values(true), action(ArgAction::Set))]
+        state: String,
+    },
     List {
         #[arg(short('d'), long, action)]
         /// Disables outputting the dates clips were taken in the output

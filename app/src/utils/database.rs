@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use camino::Utf8PathBuf;
-use itertools::{multiunzip, Either, Itertools, MultiUnzip};
-use redb::{AccessGuard, Database, Key, Range, ReadableTable, TableDefinition, Value};
+use itertools::{Either, Itertools};
+use redb::{Database, ReadableTable, TableDefinition};
 use std::{
     cell::RefCell,
     cmp::Ordering::{Equal, Greater, Less},

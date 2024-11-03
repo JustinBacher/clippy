@@ -1,0 +1,25 @@
+[package]
+name = "clippy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+camino = "1.1.9"
+chrono = { version = "0.4.38", features = ["now", "clock"] }
+clap = { version = "4.5.20", features = [
+    "derive",
+    "string",
+    "wrap_help",
+    "env",
+] }
+clap_generate = "3.0.3"
+clap_mangen = "0.2.24"
+itertools = "0.13.0"
+log = "0.4.22"
+mockall = "0.13.0"
+redb = "2.1.4"
+thiserror = "1.0.65"
+
+[dev-dependencies]
+anyhow = "1.0.91"
+fake = "2.10.0"
