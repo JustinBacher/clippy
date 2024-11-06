@@ -1,5 +1,7 @@
 use chrono::DateTime;
+use derive_more::Display;
 use redb::AccessGuard;
+use std::str::FromStr;
 
 pub fn trim(s: &Vec<u8>) -> Vec<u8> {
     // Original from https://stackoverflow.com/a/67358195 just changed to be used on vectors
@@ -23,11 +25,17 @@ pub fn format_entry(
     entry: (AccessGuard<i64>, AccessGuard<Vec<u8>>),
     width: usize,
 ) -> (String, String) {
+    let clip = String::from_utf8(trim(&entry.1.value())).unwrap();
+
     (
         DateTime::from_timestamp_millis(entry.0.value())
             .unwrap()
             .format("%c")
             .to_string(),
-        truncate(String::from_utf8(trim(&entry.1.value())).unwrap(), width),
+        if width == 0 {
+            clip
+        } else {
+            truncate(clip, width)
+        },
     )
 }

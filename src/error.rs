@@ -1,12 +1,9 @@
+use crate::utils::formatting::GreedyIntParseError;
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 use thiserror;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[allow(dead_code)]
-    #[error("Generic {0}")]
-    Generic(String),
-
     #[error(transparent)]
     IO(#[from] std::io::Error),
 
@@ -17,15 +14,14 @@ pub enum Error {
     DB(#[from] DatabaseError),
 
     #[error("Database error occured")]
-    DBIO(#[from] StorageError),
+    Storage(#[from] StorageError),
 
     #[error("Database error occured")]
-    TB(#[from] TableError),
+    Table(#[from] TableError),
 
     #[error("Database error occured")]
-    DBTrans(#[from] TransactionError),
+    Transaction(#[from] TransactionError),
 
-    #[allow(dead_code)]
-    #[error("Unexpected error occured")]
-    Unknown,
+    #[error("Error Parsing ID from arguments")]
+    UsizeParse(#[from] GreedyIntParseError),
 }

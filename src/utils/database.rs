@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::prelude::Result;
 use camino::Utf8PathBuf;
 use itertools::{Either, Itertools};
 use redb::{Database, ReadableTable, TableDefinition};
