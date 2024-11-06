@@ -34,7 +34,7 @@ pub(crate) struct Store {
 }
 
 impl ClippyCommand for Store {
-    fn execute(&self, args: Cli) -> Result<()> {
+    fn execute(&self, args: &Cli) -> Result<()> {
         match self.clipboard_state {
             ClipboardState::Sensitive => todo!("Use non-persistent storage for secrets"),
             ClipboardState::Clear | ClipboardState::Nil => {
@@ -48,9 +48,9 @@ impl ClippyCommand for Store {
                 );
             }
             ClipboardState::Data => {
-                let db_path = args.db_path;
-                store(&db_path, &mut stdin())?;
-                remove_duplicates(&db_path, args.duplicates, args.keep)?;
+                let db_path = &args.db_path;
+                store(db_path, &mut stdin())?;
+                remove_duplicates(db_path, args.duplicates, args.keep)?;
             }
         }
         Ok(())

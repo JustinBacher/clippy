@@ -9,7 +9,7 @@ use redb::{Database, ReadableTable, ReadableTableMetadata};
 use std::io::{stdout, Write};
 
 #[derive(Parser, Debug, PartialEq)]
-/// Removes a clip from the database
+/// Searches for a clip that contains `query`
 pub(crate) struct Search {
     #[arg(short, long)]
     /// The query to search for in clipboard history
@@ -27,7 +27,7 @@ pub(crate) struct Search {
 }
 
 impl ClippyCommand for Search {
-    fn execute(&self, args: Cli) -> Result<()> {
+    fn execute(&self, args: &Cli) -> Result<()> {
         let mut out = stdout();
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;

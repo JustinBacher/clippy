@@ -19,5 +19,5 @@ use crate::prelude::Result;
 
 pub trait ClippyCommand {
     #[allow(dead_code)]
-    fn execute(&self, args: Cli) -> Result<()>;
+    fn execute(&self, args: &Cli) -> Result<()>;
 }

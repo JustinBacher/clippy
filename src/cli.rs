@@ -1,6 +1,6 @@
-use crate::{commands, utils::formatting::GreedyInt};
+use crate::commands;
 use camino::Utf8PathBuf;
-use clap::{ArgAction, Parser, Subcommand, ValueEnum, ValueHint::AnyPath};
+use clap::{Parser, Subcommand, ValueEnum, ValueHint::AnyPath};
 use dirs::cache_dir;
 use serde::Serialize;
 use std::path::Path;

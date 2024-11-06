@@ -14,7 +14,12 @@ clap = { version = "4.5.20", features = [
 ] }
 clap_generate = "3.0.3"
 clap_mangen = "0.2.24"
-derive_more = { version = "1.0.0", features = ["display", "from", "add"] }
+derive_more = { version = "1.0.0", features = [
+    "display",
+    "from",
+    "add",
+    "into",
+] }
 dirs = "5.0.1"
 itertools = "0.13.0"
 log = "0.4.22"

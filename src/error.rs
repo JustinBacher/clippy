@@ -1,4 +1,3 @@
-use crate::utils::formatting::GreedyIntParseError;
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 use thiserror;
 
@@ -21,7 +20,4 @@ pub enum Error {
 
     #[error("Database error occured")]
     Transaction(#[from] TransactionError),
-
-    #[error("Error Parsing ID from arguments")]
-    UsizeParse(#[from] GreedyIntParseError),
 }
