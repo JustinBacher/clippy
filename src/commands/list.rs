@@ -9,8 +9,6 @@ use redb::{Database, ReadableTable};
 use serde::Serialize;
 use std::io::{stdout, Write};
 
-const FIVE_MEGABYTES: usize = 5e6 as usize;
-
 #[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ClipboardState {

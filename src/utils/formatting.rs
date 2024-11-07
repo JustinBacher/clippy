@@ -1,7 +1,5 @@
 use chrono::DateTime;
-use derive_more::Display;
 use redb::AccessGuard;
-use std::str::FromStr;
 
 pub fn trim(s: &Vec<u8>) -> Vec<u8> {
     // Original from https://stackoverflow.com/a/67358195 just changed to be used on vectors

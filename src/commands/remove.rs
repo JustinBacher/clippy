@@ -1,5 +1,5 @@
-use super::recall::GreedyInt;
 use super::ClippyCommand;
+use super::GreedyInt;
 use crate::{cli::Cli, prelude::Result, utils::database::TABLE_DEF};
 use clap::Parser;
 use derive_more::From;

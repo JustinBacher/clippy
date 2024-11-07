@@ -43,14 +43,8 @@ impl ClippyCommand for Search {
                 .for_each(|(i, entry)| {
                     let (date, payload) = entry;
                     match self.include_dates {
-                        true => out
-                            .write_fmt(format_args!("{}. {}:\t{}\n", count - i, date, payload))
-                            .ok()
-                            .unwrap(),
-                        false => out
-                            .write_fmt(format_args!("{}. {}\n", count - i, payload))
-                            .ok()
-                            .unwrap(),
+                        true => write!(out, "{}. {}:\t{}\n", count - i, date, payload).unwrap(),
+                        false => write!(out, "{}. {}\n", count - i, payload).unwrap(),
                     }
                 });
         }

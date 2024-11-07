@@ -4,7 +4,7 @@ use crate::cli::Cli;
 use crate::prelude::*;
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, PartialEq)]
 #[command()]
 pub(crate) struct Version;
 
