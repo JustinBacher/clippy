@@ -1,10 +1,7 @@
-use crate::prelude::Result;
-use dirs::cache_dir;
-use std::path::Path;
+use std::fs::canonicalize;
 
-pub fn get_config_path() -> Result<String> {
-    Ok(Path::join(&cache_dir().unwrap(), "/clippy/db")
-        .to_str()
-        .unwrap()
-        .to_string())
+pub fn get_config_path() -> Option<String> {
+    let exp_path = shellexpand::full("$HOME/.cache/clippy/db").ok()?;
+    let can_path = canonicalize(exp_path.as_ref()).ok()?;
+    can_path.into_os_string().into_string().ok()
 }

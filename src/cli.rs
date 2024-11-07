@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand, ValueHint::AnyPath};
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum Commands {
     Store(commands::Store),
+    GenCompletions(commands::GenCompletions),
     List(commands::List),
     Recall(commands::Recall),
     Search(commands::Search),

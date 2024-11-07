@@ -69,6 +69,7 @@ fn store(db_path: &Utf8PathBuf, input: &mut Stdin) -> Result<()> {
         ()
     }
 
+    println!("db path: {:?}", &db_path);
     let db = Database::create(&db_path)?;
     let tx = db.begin_write()?;
     {

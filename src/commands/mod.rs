@@ -1,3 +1,4 @@
+pub mod completions;
 pub mod list;
 pub mod recall;
 pub mod remove;
@@ -6,6 +7,7 @@ pub mod store;
 pub mod version;
 pub mod wipe;
 
+pub(crate) use completions::GenCompletions;
 pub(crate) use list::List;
 pub(crate) use recall::Recall;
 pub(crate) use remove::Remove;
