@@ -20,7 +20,7 @@ Clippy is a simple lightweight and easy to use clipboard history manager for
 
 ## Installation
 - Using your distro's package manager. Refer to the list in [packaging](#packaging)
-- Download a binary from the [releases] by(https://github.com/JustinBacher/clippy/releases/latest) and place in your `$PATH`
+- Download a binary from the [releases](https://github.com/JustinBacher/clippy/releases/latest) and place in your `$PATH`
 
 ### Packaging
 [![](https://repology.org/badge/vertical-allrepos/clippy.svg?columns=4)](https://repology.org/project/clippy/versions)
