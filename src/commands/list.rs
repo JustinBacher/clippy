@@ -1,11 +1,11 @@
 use super::ClippyCommand;
 use crate::{
-    cli::Cli,
+    cli::App,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
 use clap::{Parser, ValueEnum};
-use redb::{Database, ReadableTable};
+use redb::{Database, ReadableTable, ReadableTableMetadata};
 use serde::Serialize;
 use std::io::{stdout, Write};
 
@@ -34,13 +34,18 @@ pub(crate) struct List {
 }
 
 impl ClippyCommand for List {
-    fn execute(&self, args: &Cli) -> Result<()> {
+    fn execute(&self, args: &App) -> Result<()> {
         let mut out = stdout();
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;
         {
             let table = tx.open_table(TABLE_DEF)?;
-            let count = table.iter()?.count();
+
+            if table.is_empty()? {
+                println!("Clipboard is empty. Ready for you to start copying");
+            }
+
+            let count = table.len()? as usize;
 
             table.iter()?.enumerate().for_each(|(i, entry)| {
                 let (date, payload) = format_entry(entry.unwrap(), self.preview_width);

@@ -12,18 +12,16 @@ clap = { version = "4.5.20", features = [
     "wrap_help",
     "env",
 ] }
-clap_generate = "3.0.3"
+clap_complete = "4.5.37"
 clap_mangen = "0.2.24"
 derive_more = { version = "1.0.0", features = [
     "display",
     "from",
     "add",
-    "into",
 ] }
 dirs = "5.0.1"
 itertools = "0.13.0"
 log = "0.4.22"
-mockall = "0.13.0"
 pretty_env_logger = "0.5.0"
 redb = "2.1.4"
 serde = { version = "1.0.214", features = ["derive", "serde_derive"] }
@@ -31,6 +29,8 @@ thiserror = "1.0.65"
 tracing = "0.1.40"
 
 [dev-dependencies]
+tempfile = "3.14.0"
+mockall = "0.13.0"
 anyhow = "1.0.91"
 fake = "2.10.0"
 camino = "1.1.9"

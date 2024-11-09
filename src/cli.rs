@@ -1,4 +1,4 @@
-use crate::{commands, utils::get_config_path};
+use crate::{commands, utils::get_cache_path};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand, ValueHint::AnyPath};
 
@@ -17,12 +17,14 @@ pub enum Commands {
 #[derive(Parser)]
 #[command(name = "clippy", version)]
 /// Clippy is a lightweight clipboard history manager for Wayland built using Rust
-pub struct Cli {
+pub struct App {
     #[command(subcommand)]
     pub command: Commands,
 
-    #[arg( long, default_value = get_config_path().unwrap(), value_hint(AnyPath))]
-
+    #[arg(
+        long,
+        default_value = get_cache_path("clippy", "db").unwrap(),
+        value_hint(AnyPath))]
     /// Path to the local database used to store previous clips
     pub db_path: Utf8PathBuf,
 

@@ -1,6 +1,6 @@
 use super::ClippyCommand;
 use crate::{
-    cli::Cli,
+    cli::App,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
@@ -27,7 +27,7 @@ pub(crate) struct Search {
 }
 
 impl ClippyCommand for Search {
-    fn execute(&self, args: &Cli) -> Result<()> {
+    fn execute(&self, args: &App) -> Result<()> {
         let mut out = stdout();
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;
@@ -43,8 +43,8 @@ impl ClippyCommand for Search {
                 .for_each(|(i, entry)| {
                     let (date, payload) = entry;
                     match self.include_dates {
-                        true => write!(out, "{}. {}:\t{}\n", count - i, date, payload).unwrap(),
-                        false => write!(out, "{}. {}\n", count - i, payload).unwrap(),
+                        true => writeln!(out, "{}. {}:\t{}", count - i, date, payload).unwrap(),
+                        false => writeln!(out, "{}. {}\n", count - i, payload).unwrap(),
                     }
                 });
         }

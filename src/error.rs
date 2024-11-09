@@ -1,7 +1,7 @@
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
-use thiserror;
+use thiserror::Error as ThisError;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(ThisError, Debug)]
 pub enum Error {
     #[error(transparent)]
     IO(#[from] std::io::Error),

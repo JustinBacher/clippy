@@ -1,7 +1,19 @@
-use std::fs::canonicalize;
+use dirs::{cache_dir, config_dir};
+use std::fs::create_dir_all;
+use std::path::Path;
 
-pub fn get_config_path() -> Option<String> {
-    let exp_path = shellexpand::full("$HOME/.cache/clippy/db").ok()?;
-    let can_path = canonicalize(exp_path.as_ref()).ok()?;
-    can_path.into_os_string().into_string().ok()
+pub fn get_cache_path(path: &str, name: &str) -> Option<String> {
+    let parent = Path::join(cache_dir()?.as_path(), Path::new(path));
+
+    create_dir_all(parent.to_str()?).unwrap();
+
+    Some(Path::join(&parent, Path::new(name)).to_str()?.to_string())
+}
+
+pub fn get_config_path(path: &str, name: &str) -> Option<String> {
+    let parent = Path::join(config_dir()?.as_path(), Path::new(path));
+
+    create_dir_all(parent.to_str()?).unwrap();
+
+    Some(Path::join(&parent, Path::new(name)).to_str()?.to_string())
 }
