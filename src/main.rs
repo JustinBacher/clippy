@@ -14,7 +14,7 @@ use cli::{App, Commands};
 use prelude::Result;
 
 fn main() -> Result<()> {
-    // pretty_env_logger::init();
+    pretty_env_logger::init();
     let args = App::parse();
 
     // I wanna know if there's a better way to do this than this huge blob
