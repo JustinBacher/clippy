@@ -1,6 +1,6 @@
 use super::ClippyCommand;
 use super::GreedyInt;
-use crate::{cli::Cli, prelude::Result, utils::database::TABLE_DEF};
+use crate::{cli::App, prelude::Result, utils::database::TABLE_DEF};
 use clap::Parser;
 use derive_more::From;
 use redb::{Database, ReadableTable, ReadableTableMetadata};
@@ -13,7 +13,7 @@ pub(crate) struct Remove {
 }
 
 impl ClippyCommand for Remove {
-    fn execute(&self, args: &Cli) -> Result<()> {
+    fn execute(&self, args: &App) -> Result<()> {
         let position: usize = self.id.into();
         let db = Database::open(&args.db_path)?;
         let read_tx = db.begin_read()?;

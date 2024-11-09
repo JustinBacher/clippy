@@ -1,5 +1,5 @@
 use super::{ClippyCommand, GreedyInt};
-use crate::{cli::Cli, prelude::Result, utils::database::TABLE_DEF};
+use crate::{cli::App, prelude::Result, utils::database::TABLE_DEF};
 use clap::Parser;
 use redb::{Database, ReadableTable, ReadableTableMetadata};
 
@@ -18,7 +18,7 @@ pub(crate) struct Recall {
 }
 
 impl ClippyCommand for Recall {
-    fn execute(&self, args: &Cli) -> Result<()> {
+    fn execute(&self, args: &App) -> Result<()> {
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;
 
