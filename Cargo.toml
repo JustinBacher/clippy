@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 camino = "1"
-chrono = { version = "0.4", features = ["now", "clock", "proptest"] }
+chrono = "0.4"
 clap = { version = "4.5", features = [
     "cargo",
     "derive",
@@ -22,12 +22,14 @@ clap_complete = "4.5"
 clap_mangen = "0.2"
 derive_more = { version = "1", features = [ "display", "from", "add"] }
 dirs = "5"
+image = "0.25"
 itertools = "0.13"
 log = "0.4"
 pretty_env_logger = "0.5"
 redb = "2"
 scopeguard = "1"
 serde = { version = "1.0", features = ["derive", "serde_derive"] }
+size = "0.4.1"
 thiserror = "1.0"
 tracing = "0.1"
 

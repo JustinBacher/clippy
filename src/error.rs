@@ -1,3 +1,4 @@
+use image::error::ImageError;
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 use thiserror::Error as ThisError;
 
@@ -20,4 +21,7 @@ pub enum Error {
 
     #[error("Database error occured")]
     Transaction(#[from] TransactionError),
+
+    #[error("Error while collecting image data from history")]
+    Decoding(#[from] ImageError),
 }

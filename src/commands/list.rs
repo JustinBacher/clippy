@@ -43,6 +43,7 @@ impl ClippyCommand for List {
 
             if table.is_empty()? {
                 println!("Clipboard is empty. Ready for you to start copying");
+                return Ok(());
             }
 
             let count = table.len()? as usize;
