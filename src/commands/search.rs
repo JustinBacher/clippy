@@ -10,7 +10,7 @@ use std::io::{stdout, Write};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Searches for a clip that contains `query`
-pub(crate) struct Search {
+pub struct Search {
     #[arg(short, long)]
     /// The query to search for in clipboard history
     query: String,

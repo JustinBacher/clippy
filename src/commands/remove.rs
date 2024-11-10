@@ -7,7 +7,7 @@ use redb::{Database, ReadableTable, ReadableTableMetadata};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Removes a clip from the database
-pub(crate) struct Remove {
+pub struct Remove {
     /// The id of the clip from the output of `list` command
     id: GreedyInt,
 }
@@ -22,18 +22,17 @@ impl ClippyCommand for Remove {
         {
             if read_table.len()? == 0 {
                 println!("Clipboard empty. There is nothing to remove.");
-                ()
+                return Ok(());
             }
         }
 
         let write_tx = db.begin_write()?;
 
         {
-            let cursor = Box::new(read_table.iter()?);
+            let mut cursor = read_table.iter()?;
+            let mut write_table = write_tx.open_table(TABLE_DEF)?;
 
-            write_tx
-                .open_table(TABLE_DEF)?
-                .remove(cursor.skip(position - 1).next().unwrap()?.0.value())?;
+            write_table.remove(cursor.nth(position - 1).unwrap()?.0.value())?;
         }
         write_tx.commit()?;
 

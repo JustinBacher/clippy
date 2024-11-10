@@ -7,10 +7,10 @@ use crate::{
         formatting::trim,
     },
 };
-use camino::Utf8PathBuf;
 use chrono::Local;
 use clap::{ArgAction, Parser, ValueEnum};
 use redb::Database;
+
 use serde::Serialize;
 use std::{
     io::{stdin, Read},
@@ -31,7 +31,7 @@ pub enum ClipboardState {
 
 #[derive(Parser, Debug, PartialEq)]
 /// Reads a clip from stdin and remembers it for later recall
-pub(crate) struct Store {
+pub struct Store {
     #[arg(env, action=ArgAction::Set, hide(true))]
     clipboard_state: ClipboardState,
 }
@@ -51,72 +51,44 @@ impl ClippyCommand for Store {
                 );
             }
             ClipboardState::Data => {
-                let db_path = &args.db_path;
+                let db = Database::open(&args.db_path)?;
                 let mut payload = Vec::new();
                 stdin().read_to_end(&mut payload)?;
-                store(db_path, payload)?;
-                remove_duplicates(db_path, args.duplicates, args.keep)?;
+                store(&db, payload)?;
+                remove_duplicates(&db, args.duplicates)?;
             }
         }
         Ok(())
     }
 }
 
-fn store(db_path: &Utf8PathBuf, payload: Vec<u8>) -> Result<()> {
+pub fn store(db: &Database, payload: Vec<u8>) -> Result<Vec<u8>> {
     if size_of_val(&payload) > FIVE_MEGABYTES || trim(&payload).is_empty() {
-        return Ok(());
+        panic!("Data too large")
     }
 
-    let db = Database::create(db_path)?;
     let tx = db.begin_write()?;
     {
         let mut table = tx.open_table(TABLE_DEF)?;
-        table.insert(Local::now().timestamp_millis(), payload.to_owned())?;
+        table.insert(Local::now().timestamp_micros(), payload.to_owned())?;
     }
     tx.commit()?;
-
-    Ok(())
+    Ok(payload)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use fake::{Fake, StringFaker};
+    use crate::utils::database::test::{fill_db_and_test, FillWith};
     use redb::ReadableTableMetadata;
-    use tempfile::NamedTempFile;
-
-    const ASCII: &str =
-        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&\'()*+,-./:;<=>?@";
 
     #[test]
     fn it_stores() {
-        let faker = StringFaker::charset(ASCII.into());
-        let tmp = NamedTempFile::new().unwrap().into_temp_path();
+        fill_db_and_test(FillWith::Random, |db, _| {
+            let count = db.begin_read()?.open_table(TABLE_DEF)?.len()?;
 
-        let path = Utf8PathBuf::from("/tmp/db");
-        // let path = Utf8PathBuf::from(tmp.to_str().unwrap().to_string());
-        println!("{}", path);
-        tmp.close().unwrap();
-
-        for i in 0..100 {
-            let payload = match i % 10 {
-                0 => "asdf".to_string(),
-                _ => faker.fake(),
-            };
-
-            println!("Testing storing: {}", payload);
-            store(&path, payload.into_bytes()).unwrap();
-        }
-
-        let count = Database::create(path)
-            .unwrap()
-            .begin_read()
-            .unwrap()
-            .open_table(TABLE_DEF)
-            .unwrap()
-            .len()
-            .unwrap();
-
-        assert_eq!(count, 10);
+            Ok(assert_eq!(count, 20))
+        })
+        .unwrap();
     }
 }

@@ -6,7 +6,7 @@ use std::cell::RefCell;
 
 #[derive(Parser, Debug, PartialEq)]
 /// Wipes all clips from clipboard
-pub(crate) struct Wipe {}
+pub struct Wipe {}
 
 impl ClippyCommand for Wipe {
     fn execute(&self, args: &App) -> Result<()> {

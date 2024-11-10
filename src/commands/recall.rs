@@ -8,7 +8,7 @@ use redb::{Database, ReadableTable, ReadableTableMetadata};
 /// Outputs clip to `stdout`.
 ///
 /// Meant for use with `wl-paste`
-pub(crate) struct Recall {
+pub struct Recall {
     /// The id of the clip to use.
     ///
     /// From the output of `list` command

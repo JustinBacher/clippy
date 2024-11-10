@@ -1,17 +1,13 @@
-extern crate pretty_env_logger;
-#[macro_use]
-extern crate log;
+pub use clippy::cli;
+pub use clippy::commands;
+pub use clippy::error;
+pub use clippy::prelude;
+pub use clippy::utils;
 
-mod cli;
-mod commands;
-mod error;
-mod prelude;
-mod utils;
-
-use crate::commands::ClippyCommand;
 use clap::Parser;
-use cli::{App, Commands};
-use prelude::Result;
+use clippy::cli::{App, Commands};
+use clippy::commands::ClippyCommand;
+use clippy::prelude::Result;
 
 fn main() -> Result<()> {
     pretty_env_logger::init();

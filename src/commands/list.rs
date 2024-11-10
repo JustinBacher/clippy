@@ -21,7 +21,7 @@ pub enum ClipboardState {
 
 #[derive(Parser, Debug, PartialEq)]
 /// Lists all stored clips in clipboard
-pub(crate) struct List {
+pub struct List {
     #[arg(short('d'), long, action)]
     /// Includes dates clips were taken in the output
     include_dates: bool,

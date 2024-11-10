@@ -6,7 +6,7 @@ use clap::Parser;
 
 #[derive(Parser, Debug, PartialEq)]
 #[command()]
-pub(crate) struct Version;
+pub struct Version;
 
 impl ClippyCommand for Version {
     fn execute(&self, _: &App) -> Result<()> {

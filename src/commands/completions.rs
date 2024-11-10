@@ -15,7 +15,7 @@ enum LinuxShells {
 
 #[derive(Parser, Debug, PartialEq)]
 /// Lists all stored clips in clipboard
-pub(crate) struct GenCompletions {
+pub struct GenCompletions {
     #[arg(value_parser = value_parser!(LinuxShells))]
     shell: LinuxShells,
     #[arg(short, long, value_hint(AnyPath))]
