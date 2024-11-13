@@ -74,15 +74,18 @@ pub fn store(db: &Database, payload: Vec<u8>) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::utils::database::test::{fill_db_and_test, FillWith};
+    use crate::utils::database::test::{fill_db_and_test, get_db_contents, FillWith};
     use redb::ReadableTableMetadata;
 
     #[test]
     fn it_stores() {
-        fill_db_and_test(FillWith::Random, |db, _| {
+        fill_db_and_test(FillWith::Random, 20, |db, before| {
             let count = db.begin_read()?.open_table(TABLE_DEF)?.len()?;
 
-            Ok(assert_eq!(count, 20))
+            assert_eq!(count, 20);
+            assert_eq!(get_db_contents(db)?, before);
+
+            Ok(())
         })
         .unwrap();
     }

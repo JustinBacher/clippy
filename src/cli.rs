@@ -46,3 +46,11 @@ pub struct ClippyCli {
     #[arg(short, action = clap::ArgAction::Count)]
     verbose: u8,
 }
+
+#[cfg(test)]
+pub fn mock_cli<'a, I>(args: I) -> Option<ClippyCli>
+where
+    I: Iterator<Item = &'a str>,
+{
+    ClippyCli::try_parse_from(std::iter::once(APP_NAME).chain(args)).ok()
+}

@@ -62,3 +62,22 @@ impl ClippyCommand for List {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::cli::mock_cli;
+    use crate::utils::database::test::{fill_db_and_test, get_db_contents, FillWith};
+
+    #[test]
+    fn it_lists() {
+        fill_db_and_test(FillWith::Random, 20, |db, before| {
+            mock_cli(std::iter::once("list"));
+
+            let after = get_db_contents(db)?;
+
+            assert_eq!(after, before);
+
+            Ok(())
+        });
+    }
+}

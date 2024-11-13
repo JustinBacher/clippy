@@ -17,3 +17,14 @@ pub fn get_config_path(path: &str, name: &str) -> Option<String> {
 
     Some(Path::join(&parent, Path::new(name)).to_str()?.to_string())
 }
+#[cfg(test)]
+use rand::{distributions::Alphanumeric, Rng};
+
+#[cfg(test)]
+pub fn random_str() -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(7)
+        .map(char::from)
+        .collect()
+}
