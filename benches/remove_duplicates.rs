@@ -1,10 +1,16 @@
 use chrono::Local;
-use clippy::utils::database::{remove_duplicates, TABLE_DEF};
+use clippy::{prelude::Result, utils::database::TABLE_DEF};
 use criterion::{criterion_group, criterion_main, Criterion};
+use itertools::Either::{Left, Right};
 use rand::{distributions::Alphanumeric, Rng};
-use redb::Database;
+use redb::{Database, ReadableTable, ReadableTableMetadata};
 use scopeguard::defer;
-use std::{fs, hint::black_box, ops::FnOnce};
+use std::{
+    cmp::Ordering::{Equal, Greater, Less},
+    collections::HashSet,
+    fs,
+    hint::black_box,
+};
 use tempfile::NamedTempFile;
 
 pub fn get_random_string() -> String {
@@ -15,48 +21,106 @@ pub fn get_random_string() -> String {
         .collect()
 }
 
-fn create_and_fill_db<F>(amount: usize, func: F)
+fn create_and_fill_db<F>(amount: usize, func: F) -> Result<()>
 where
-    F: FnOnce(&Database),
+    F: FnOnce(&Database) -> Result<()>,
 {
-    let dupe = "asdf";
     let tmp = NamedTempFile::new().unwrap().into_temp_path();
     let path = tmp.to_str().unwrap().to_string();
-    tmp.close().unwrap();
-
-    let db = Database::create(&path).unwrap();
-    defer!(fs::remove_file(path).unwrap());
-
+    tmp.close()?;
+    defer!(fs::remove_file(&path).unwrap());
+    let db = Database::create(&path)?;
     for i in 0..amount {
-        let dummy = match i % 10 {
-            0 => get_random_string().into_bytes(),
-            _ => dupe.to_string().into_bytes(),
-        };
-
-        let tx = db.begin_write().unwrap();
+        let tx = db.begin_write()?;
         {
-            let mut table = tx.open_table(TABLE_DEF).unwrap();
-            table
-                .insert(Local::now().timestamp_micros(), dummy.to_vec())
-                .unwrap();
+            tx.open_table(TABLE_DEF)?.insert(
+                Local::now().timestamp_micros(),
+                match i % 10 {
+                    0 => get_random_string().into_bytes(),
+                    _ => "asdf".to_string().into_bytes(),
+                },
+            )?;
         }
-        tx.commit().unwrap();
+        tx.commit()?;
     }
-    func(&db);
+    func(&db)
 }
 
-fn remove_dupes_custom(size: usize, dedupe_amount: i32) {
-    create_and_fill_db(size, |db| {
-        remove_duplicates(db, dedupe_amount).unwrap();
+#[allow(clippy::iter_skip_zero)]
+fn remove_dupes_old(c: &mut Criterion) {
+    let size: usize = black_box(1_000);
+    let dedupe_amount: i32 = black_box(100);
+    c.bench_function("dupes", |b| {
+        b.iter(|| {
+            create_and_fill_db(size, |db| {
+                let read_tx = db.begin_read()?;
+                let write_tx = db.begin_write()?;
+
+                {
+                    let read_table = read_tx.open_table(TABLE_DEF)?;
+                    let mut table = write_tx.open_table(TABLE_DEF)?;
+
+                    let cursor = read_table.iter()?;
+                    let mut seen = HashSet::<Vec<u8>>::new();
+                    let len = read_table.len()? as usize;
+
+                    match dedupe_amount.cmp(&0) {
+                        Greater => Left(cursor.rev().skip(len - dedupe_amount as usize)),
+                        Less => Right(cursor.skip(dedupe_amount.unsigned_abs() as usize)),
+                        Equal => Left(cursor.rev().skip(0)),
+                    }
+                    .flatten()
+                    .for_each(|(date, payload)| {
+                        if !seen.insert(payload.value()) {
+                            table.remove(date.value()).ok();
+                        }
+                    });
+                }
+
+                write_tx.commit()?;
+                Ok(())
+            })
+        })
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("dupes 20", |b| {
-        b.iter(|| remove_dupes_custom(black_box(100), black_box(20)))
+#[allow(clippy::iter_skip_zero)]
+fn remove_dupes_iter(c: &mut Criterion) {
+    let size: usize = black_box(1_000);
+    let dedupe_amount: i32 = black_box(100);
+    c.bench_function("dupes", |b| {
+        b.iter(|| {
+            create_and_fill_db(size, |db| {
+                let read_tx = db.begin_read()?;
+                let write_tx = db.begin_write()?;
+
+                {
+                    let read_table = read_tx.open_table(TABLE_DEF)?;
+                    let mut table = write_tx.open_table(TABLE_DEF)?;
+
+                    let cursor = read_table.iter()?;
+                    let mut seen = HashSet::<Vec<u8>>::new();
+                    let len = read_table.len()? as usize;
+
+                    match dedupe_amount.cmp(&0) {
+                        Greater => Left(cursor.rev().skip(len - dedupe_amount as usize)),
+                        Less => Right(cursor.skip(dedupe_amount.unsigned_abs() as usize)),
+                        Equal => Left(cursor.rev().skip(0)),
+                    }
+                    .flatten()
+                    .for_each(|(date, payload)| {
+                        if !seen.insert(payload.value()) {
+                            table.remove(date.value()).ok();
+                        }
+                    });
+                }
+
+                write_tx.commit()?;
+                Ok(())
+            })
+        })
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, remove_dupes_old, remove_dupes_iter);
 criterion_main!(benches);
-
