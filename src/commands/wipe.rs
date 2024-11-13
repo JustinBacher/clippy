@@ -1,5 +1,5 @@
 use super::ClippyCommand;
-use crate::{cli::App, prelude::Result, utils::database::TABLE_DEF};
+use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
 use clap::Parser;
 use redb::{Database, ReadableTable};
 use std::cell::RefCell;
@@ -9,7 +9,7 @@ use std::cell::RefCell;
 pub struct Wipe {}
 
 impl ClippyCommand for Wipe {
-    fn execute(&self, args: &App) -> Result<()> {
+    fn execute(&self, args: &ClippyCli) -> Result<()> {
         let db = Database::open(&args.db_path)?;
         let tx = db.begin_write()?;
         {

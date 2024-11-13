@@ -1,6 +1,6 @@
 use super::ClippyCommand;
 use crate::{
-    cli::App,
+    cli::ClippyCli,
     prelude::Result,
     utils::{
         database::{remove_duplicates, TABLE_DEF},
@@ -37,18 +37,13 @@ pub struct Store {
 }
 
 impl ClippyCommand for Store {
-    fn execute(&self, args: &App) -> Result<()> {
+    fn execute(&self, args: &ClippyCli) -> Result<()> {
         match self.clipboard_state {
             ClipboardState::Sensitive => todo!("Use non-persistent storage for secrets"),
             ClipboardState::Clear | ClipboardState::Nil => {
                 println!("Should be warning");
-                warn!(
-                    "
-                    Clippy does not implement \"nil\" or \"clear\" for `CLIPBOARD_STATE`
-                    Environment Variable.
-                    Please use clippy with
-                    [wl-clipboard](https://github.com/bugaevc/wl-clipboard)"
-                );
+                warn!("Clippy does not implement \"nil\" or \"clear\" for `CLIPBOARD_STATE` Environment Variable. \
+                    Please use clippy with wl-clipboard or similar. https://github.com/bugaevc/wl-clipboard");
             }
             ClipboardState::Data => {
                 let db = Database::open(&args.db_path)?;

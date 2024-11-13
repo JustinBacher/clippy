@@ -1,6 +1,6 @@
 use super::ClippyCommand;
 use crate::{
-    cli::App,
+    cli::ClippyCli,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
@@ -27,7 +27,7 @@ pub struct Search {
 }
 
 impl ClippyCommand for Search {
-    fn execute(&self, args: &App) -> Result<()> {
+    fn execute(&self, args: &ClippyCli) -> Result<()> {
         let mut out = stdout();
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;

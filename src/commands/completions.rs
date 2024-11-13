@@ -1,5 +1,5 @@
 use super::ClippyCommand;
-use crate::{cli::App, prelude::Result, utils::get_config_path};
+use crate::{cli::ClippyCli, prelude::Result, utils::get_config_path};
 use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
 use clap_complete::aot::{generate, Shell};
 use serde::Serialize;
@@ -23,14 +23,14 @@ pub struct GenCompletions {
 }
 
 impl ClippyCommand for GenCompletions {
-    fn execute(&self, _: &App) -> Result<()> {
+    fn execute(&self, _: &ClippyCli) -> Result<()> {
         let path = write_to_config(
             match self.shell {
                 LinuxShells::Bash => Shell::Bash,
                 LinuxShells::Fish => Shell::Fish,
                 LinuxShells::Zsh => Shell::Zsh,
             },
-            &mut App::command(),
+            &mut ClippyCli::command(),
         );
 
         println!(

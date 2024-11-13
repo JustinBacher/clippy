@@ -1,6 +1,6 @@
 use super::ClippyCommand;
 use crate::{
-    cli::App,
+    cli::ClippyCli,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
@@ -22,19 +22,19 @@ pub enum ClipboardState {
 #[derive(Parser, Debug, PartialEq)]
 /// Lists all stored clips in clipboard
 pub struct List {
-    #[arg(short('d'), long, action)]
     /// Includes dates clips were taken in the output
+    #[arg(short('d'), long, action)]
     include_dates: bool,
 
-    #[arg(short('w'), long, default_value = "100")]
     /// Max characters to show of clips in preview. Use 0 to retain original width.
     ///
     /// This does not affect what is put back into the clipboard
+    #[arg(short('w'), long, default_value = "100")]
     preview_width: usize,
 }
 
 impl ClippyCommand for List {
-    fn execute(&self, args: &App) -> Result<()> {
+    fn execute(&self, args: &ClippyCli) -> Result<()> {
         let mut out = stdout();
         let db = Database::create(&args.db_path)?;
         let tx = db.begin_read()?;

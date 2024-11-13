@@ -7,25 +7,30 @@ pub mod store;
 pub mod version;
 pub mod wipe;
 
-pub(crate) use completions::GenCompletions;
-pub(crate) use list::List;
-pub(crate) use recall::Recall;
-pub(crate) use remove::Remove;
-pub(crate) use search::Search;
-pub(crate) use store::Store;
-pub(crate) use version::Version;
-pub(crate) use wipe::Wipe;
+pub use completions::GenCompletions;
+pub use list::List;
+pub use recall::Recall;
+pub use remove::Remove;
+pub use search::Search;
+pub use store::Store;
+pub use version::Version;
+pub use wipe::Wipe;
 
 use crate::{
-    cli::App,
+    cli::ClippyCli,
     prelude::{Error, Result},
 };
 use derive_more::Display;
 use std::{ops::Sub, str::FromStr};
 
 pub trait ClippyCommand {
-    #[allow(dead_code)]
-    fn execute(&self, args: &App) -> Result<()>;
+    fn execute(&self, _: &ClippyCli) -> Result<()> {
+        panic!(
+            "Oops! you weren't supposed to be able to see this. \
+            Please submit an issue here: \
+            https://github.com/JustinBacher/clippy/issues"
+        )
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]

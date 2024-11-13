@@ -5,13 +5,13 @@ pub use clippy::prelude;
 pub use clippy::utils;
 
 use clap::Parser;
-use clippy::cli::{App, Commands};
+use clippy::cli::{ClippyCli, Commands};
 use clippy::commands::ClippyCommand;
 use clippy::prelude::Result;
 
 fn main() -> Result<()> {
     pretty_env_logger::init();
-    let args = App::parse();
+    let args = ClippyCli::parse();
 
     // I wanna know if there's a better way to do this than this huge blob
     //
