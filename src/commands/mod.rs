@@ -34,34 +34,25 @@ pub trait ClippyCommand {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]
-pub struct GreedyInt {
-    data: usize,
-}
+pub struct GreedyInt(usize);
 
 impl FromStr for GreedyInt {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<GreedyInt> {
-        Ok(GreedyInt {
-            data: s
-                .chars()
+        Ok(GreedyInt(
+            s.chars()
                 .take_while(|c| c.is_ascii_digit())
                 .collect::<String>()
                 .parse::<usize>()
                 .unwrap(),
-        })
-    }
-}
-
-impl From<usize> for GreedyInt {
-    fn from(data: usize) -> Self {
-        Self { data }
+        ))
     }
 }
 
 impl From<GreedyInt> for usize {
     fn from(data: GreedyInt) -> Self {
-        data.data
+        data.0
     }
 }
 
@@ -69,6 +60,6 @@ impl Sub<usize> for &GreedyInt {
     type Output = usize;
 
     fn sub(self, other: usize) -> usize {
-        self.data - other
+        self.0 - other
     }
 }
