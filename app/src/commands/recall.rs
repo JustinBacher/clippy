@@ -1,7 +1,8 @@
-use super::{ClippyCommand, GreedyInt};
-use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
 use clap::Parser;
 use redb::{Database, ReadableTable, ReadableTableMetadata};
+
+use super::{ClippyCommand, GreedyInt};
+use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(allow_missing_positional(true))]

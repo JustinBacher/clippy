@@ -1,8 +1,10 @@
-use super::ClippyCommand;
-use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
+use std::cell::RefCell;
+
 use clap::Parser;
 use redb::{Database, ReadableTable};
-use std::cell::RefCell;
+
+use super::ClippyCommand;
+use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Wipes all clips from clipboard
@@ -18,10 +20,7 @@ impl ClippyCommand for Wipe {
             let cursor = read_table.iter()?;
 
             cursor.for_each(|entry| {
-                table
-                    .borrow_mut()
-                    .remove(entry.as_ref().unwrap().0.value())
-                    .unwrap();
+                table.borrow_mut().remove(entry.as_ref().unwrap().0.value()).unwrap();
             });
         }
         tx.commit()?;

@@ -1,3 +1,13 @@
+use std::{
+    io::{stdin, Read},
+    mem::size_of_val,
+};
+
+use chrono::Local;
+use clap::{ArgAction, Parser, ValueEnum};
+use redb::Database;
+use serde::Serialize;
+
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
@@ -6,15 +16,6 @@ use crate::{
         database::{remove_duplicates, TABLE_DEF},
         formatting::trim,
     },
-};
-use chrono::Local;
-use clap::{ArgAction, Parser, ValueEnum};
-use redb::Database;
-
-use serde::Serialize;
-use std::{
-    io::{stdin, Read},
-    mem::size_of_val,
 };
 
 const FIVE_MEGABYTES: usize = 5e6 as usize;
@@ -44,14 +45,14 @@ impl ClippyCommand for Store {
                 println!("Should be warning");
                 warn!("Clippy does not implement \"nil\" or \"clear\" for `CLIPBOARD_STATE` Environment Variable. \
                     Please use clippy with wl-clipboard or similar. https://github.com/bugaevc/wl-clipboard");
-            }
+            },
             ClipboardState::Data => {
                 let db = Database::open(&args.db_path)?;
                 let mut payload = Vec::new();
                 stdin().read_to_end(&mut payload)?;
                 store(&db, payload)?;
                 remove_duplicates(&db, args.duplicates)?;
-            }
+            },
         }
         Ok(())
     }
@@ -73,9 +74,10 @@ pub fn store(db: &Database, payload: Vec<u8>) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod test {
+    use redb::ReadableTableMetadata;
+
     use super::*;
     use crate::utils::database::test::{fill_db_and_test, get_db_contents, FillWith};
-    use redb::ReadableTableMetadata;
 
     #[test]
     fn it_stores() {

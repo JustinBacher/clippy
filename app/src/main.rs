@@ -1,13 +1,10 @@
-pub use clippy::cli;
-pub use clippy::commands;
-pub use clippy::error;
-pub use clippy::prelude;
-pub use clippy::utils;
-
 use clap::Parser;
-use clippy::cli::{ClippyCli, Commands};
-use clippy::commands::ClippyCommand;
-use clippy::prelude::Result;
+pub use clippy::{cli, commands, error, prelude, utils};
+use clippy::{
+    cli::{ClippyCli, Commands},
+    commands::ClippyCommand,
+    prelude::Result,
+};
 
 fn main() -> Result<()> {
     pretty_env_logger::init();

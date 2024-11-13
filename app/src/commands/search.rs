@@ -1,12 +1,14 @@
+use std::io::{stdout, Write};
+
+use clap::Parser;
+use redb::{Database, ReadableTable, ReadableTableMetadata};
+
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
-use clap::Parser;
-use redb::{Database, ReadableTable, ReadableTableMetadata};
-use std::io::{stdout, Write};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Searches for a clip that contains `query`

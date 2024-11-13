@@ -1,6 +1,6 @@
+use std::{fs::create_dir_all, path::Path};
+
 use dirs::{cache_dir, config_dir};
-use std::fs::create_dir_all;
-use std::path::Path;
 
 pub fn get_cache_path(path: &str, name: &str) -> Option<String> {
     let parent = Path::join(cache_dir()?.as_path(), Path::new(path));
@@ -22,9 +22,5 @@ use rand::{distributions::Alphanumeric, Rng};
 
 #[cfg(test)]
 pub fn random_str() -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(7)
-        .map(char::from)
-        .collect()
+    rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect()
 }

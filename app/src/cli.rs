@@ -1,6 +1,7 @@
-use crate::{commands, utils::get_cache_path};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand, ValueHint::AnyPath};
+
+use crate::{commands, utils::get_cache_path};
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum Commands {
@@ -14,7 +15,7 @@ pub enum Commands {
     Version(commands::Version),
 }
 
-const APP_NAME: &str = "clippy";
+pub const APP_NAME: &str = "clippy";
 
 #[derive(Parser)]
 #[command(name = APP_NAME, version)]

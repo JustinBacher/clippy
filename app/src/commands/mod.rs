@@ -7,7 +7,10 @@ pub mod store;
 pub mod version;
 pub mod wipe;
 
+use std::{ops::Sub, str::FromStr};
+
 pub use completions::GenCompletions;
+use derive_more::Display;
 pub use list::List;
 pub use recall::Recall;
 pub use remove::Remove;
@@ -20,8 +23,6 @@ use crate::{
     cli::ClippyCli,
     prelude::{Error, Result},
 };
-use derive_more::Display;
-use std::{ops::Sub, str::FromStr};
 
 pub trait ClippyCommand {
     fn execute(&self, _: &ClippyCli) -> Result<()> {

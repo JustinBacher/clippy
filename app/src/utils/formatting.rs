@@ -1,9 +1,11 @@
-use crate::prelude::Result;
+use std::{io::Cursor, mem::size_of_val};
+
 use chrono::DateTime;
 use image::ImageReader;
 use redb::AccessGuard;
 use size::Size;
-use std::{io::Cursor, mem::size_of_val};
+
+use crate::prelude::Result;
 
 pub fn trim(s: &[u8]) -> Vec<u8> {
     // Original from https://stackoverflow.com/a/67358195 just changed to be used on vectors

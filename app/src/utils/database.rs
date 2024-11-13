@@ -1,8 +1,9 @@
-use crate::prelude::Result;
+use std::{cmp::Ordering::*, collections::HashSet};
+
 use itertools::Either::{Left, Right};
 use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
-use std::cmp::Ordering::*;
-use std::collections::HashSet;
+
+use crate::prelude::Result;
 
 pub const TABLE_DEF: TableDefinition<i64, Vec<u8>> = TableDefinition::new("clips");
 
@@ -38,13 +39,15 @@ pub fn remove_duplicates(db: &Database, duplicates: i32) -> Result<()> {
 
 #[cfg(test)]
 pub mod test {
-    use super::*;
-    use crate::{commands::store::store, utils::random_str};
+    use std::fs;
+
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
     use scopeguard::defer;
-    use std::fs;
     use tempfile::NamedTempFile;
+
+    use super::*;
+    use crate::{commands::store::store, utils::random_str};
 
     pub enum FillWith<'a> {
         Dupes(&'a str),
@@ -63,9 +66,7 @@ pub mod test {
     }
 
     pub fn fill_db_and_test<F>(fill: FillWith, amount: i64, func: F) -> Result<()>
-    where
-        F: FnOnce(&Database, Vec<Vec<u8>>) -> Result<()>,
-    {
+    where F: FnOnce(&Database, Vec<Vec<u8>>) -> Result<()> {
         let tmp = NamedTempFile::new()?.into_temp_path();
         let path = tmp.to_str().unwrap().to_string();
         tmp.close()?;

@@ -1,13 +1,15 @@
+use std::io::{stdout, Write};
+
+use clap::{Parser, ValueEnum};
+use redb::{Database, ReadableTable, ReadableTableMetadata};
+use serde::Serialize;
+
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
     prelude::Result,
     utils::{database::TABLE_DEF, formatting::format_entry},
 };
-use clap::{Parser, ValueEnum};
-use redb::{Database, ReadableTable, ReadableTableMetadata};
-use serde::Serialize;
-use std::io::{stdout, Write};
 
 #[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -40,13 +42,13 @@ impl ClippyCommand for List {
         let tx = db.begin_read()?;
         {
             let table = tx.open_table(TABLE_DEF)?;
+            let count = table.len()? as usize;
 
             if table.is_empty()? {
-                println!("Clipboard is empty. Ready for you to start copying");
-                return Ok(());
+                return Ok(println!(
+                    "Clipboard is empty. Ready for you to start copying"
+                ));
             }
-
-            let count = table.len()? as usize;
 
             table.iter()?.enumerate().for_each(|(i, entry)| {
                 let (date, payload) = format_entry(entry.unwrap(), self.preview_width);
@@ -65,8 +67,10 @@ impl ClippyCommand for List {
 
 #[cfg(test)]
 mod test {
-    use crate::cli::mock_cli;
-    use crate::utils::database::test::{fill_db_and_test, get_db_contents, FillWith};
+    use crate::{
+        cli::mock_cli,
+        utils::database::test::{fill_db_and_test, get_db_contents, FillWith},
+    };
 
     #[test]
     fn it_lists() {
@@ -78,6 +82,7 @@ mod test {
             assert_eq!(after, before);
 
             Ok(())
-        });
+        })
+        .unwrap();
     }
 }

@@ -1,0 +1,59 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH clippy 1  "clippy 0.1.0" 
+.SH NAME
+clippy \- Clippy is a lightweight clipboard history manager for Wayland built using Rust
+.SH SYNOPSIS
+\fBclippy\fR [\fB\-\-db\-path\fR] [\fB\-d\fR|\fB\-\-duplicates\fR] [\fB\-k\fR|\fB\-\-keep\fR] [\fB\-v \fR]... [\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Clippy is a lightweight clipboard history manager for Wayland built using Rust
+.SH OPTIONS
+.TP
+\fB\-\-db\-path\fR=\fIDB_PATH\fR [default: /home/justin/.cache/clippy/db]
+Path to the local database used to store previous clips
+.TP
+\fB\-d\fR, \fB\-\-duplicates\fR=\fIDUPLICATES\fR [default: 0]
+Number of most recent duplicates to keep. Negative values remove x oldest duplicates instead.
+
+Positive values keep x amount of most recent duplicates. Negative values remove x amount of duplicates from the end. 0 will retain only unique clips. Removing any duplicates.
+.TP
+\fB\-k\fR, \fB\-\-keep\fR=\fIKEEP\fR [default: 1000]
+Amount of clips to keep in database
+.TP
+\fB\-v\fR
+
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help (see a summary with \*(Aq\-h\*(Aq)
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version
+.SH SUBCOMMANDS
+.TP
+clippy\-store(1)
+Reads a clip from stdin and remembers it for later recall
+.TP
+clippy\-gen\-completions(1)
+Lists all stored clips in clipboard
+.TP
+clippy\-list(1)
+Lists all stored clips in clipboard
+.TP
+clippy\-recall(1)
+Outputs clip to `stdout`
+.TP
+clippy\-search(1)
+Searches for a clip that contains `query`
+.TP
+clippy\-wipe(1)
+Wipes all clips from clipboard
+.TP
+clippy\-remove(1)
+Removes a clip from the database
+.TP
+clippy\-version(1)
+.TP
+clippy\-help(1)
+Print this message or the help of the given subcommand(s)
+.SH VERSION
+v0.1.0
