@@ -20,7 +20,7 @@ Thanks for reading! You are awesome!
     ```
 
 ## Code style
-If you want you can review the project's [rustfmt.toml](/rustfmt.toml) and [.editorconfig](/.editorconfig)
+There is a script to perform all code styling per Clippy guidelines
 
 > [!TIP]
 > Before submitting a PR, run the check script using:
