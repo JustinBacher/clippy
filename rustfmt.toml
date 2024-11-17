@@ -16,4 +16,4 @@ match_block_trailing_comma = true
 
 use_field_init_shorthand = true
 reorder_impl_items = true
-where_single_line = true
+where_single_line = false
