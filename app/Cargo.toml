@@ -31,7 +31,7 @@ redb = "2"
 scopeguard = "1"
 serde = { version = "1.0", features = ["derive", "serde_derive"] }
 size = "0.4.1"
-thiserror = "1.0"
+thiserror = "2.0"
 tracing = "0.1"
 
 [dev-dependencies]
