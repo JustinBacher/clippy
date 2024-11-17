@@ -24,4 +24,7 @@ pub enum Error {
 
     #[error("Error while collecting image data from history")]
     Decoding(#[from] ImageError),
+
+    #[error("Error while parsing value")]
+    Parsing(&'static str),
 }

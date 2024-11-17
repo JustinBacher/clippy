@@ -33,11 +33,9 @@ fn detect_image(payload: Vec<u8>) -> Result<Option<String>> {
     let Ok(image_reader) = ImageReader::new(Cursor::new(&payload)).with_guessed_format() else {
         return Ok(None);
     };
-
     let Some(format) = image_reader.format() else {
         return Ok(None);
     };
-
     let Ok((width, height)) = image_reader.into_dimensions() else {
         return Ok(None);
     };
@@ -50,24 +48,21 @@ fn detect_image(payload: Vec<u8>) -> Result<Option<String>> {
 }
 
 pub fn format_entry(
-    entry: (AccessGuard<i64>, AccessGuard<Vec<u8>>),
+    (k, v): (AccessGuard<i64>, AccessGuard<Vec<u8>>),
     width: usize,
 ) -> (String, String) {
-    let payload = entry.1.value();
-    (
-        DateTime::from_timestamp_millis(entry.0.value())
-            .unwrap()
-            .format("%c")
-            .to_string(),
-        if let Ok(Some(image)) = detect_image(entry.1.value()) {
-            image
+    let date = DateTime::from_timestamp_millis(k.value()).unwrap().format("%c").to_string();
+
+    let data = if let Ok(Some(image)) = detect_image(v.value()) {
+        image
+    } else {
+        let clip = String::from_utf8(trim(&v.value())).unwrap();
+        if width == 0 {
+            clip
         } else {
-            let clip = String::from_utf8(trim(&payload)).unwrap();
-            if width == 0 {
-                clip
-            } else {
-                truncate(clip, width)
-            }
-        },
-    )
+            truncate(clip, width)
+        }
+    };
+
+    (date, data)
 }

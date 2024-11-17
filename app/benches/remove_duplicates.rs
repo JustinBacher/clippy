@@ -25,12 +25,15 @@ where
     let tmp = NamedTempFile::new().unwrap().into_temp_path();
     let path = tmp.to_str().unwrap().to_string();
     tmp.close()?;
-    defer!(fs::remove_file(&path).unwrap());
+
     let db = Database::create(&path)?;
-    for i in 0..amount {
-        let tx = db.begin_write()?;
-        {
-            tx.open_table(TABLE_DEF)?.insert(
+    defer!(fs::remove_file(&path).unwrap());
+
+    let tx = db.begin_write()?;
+    {
+        let mut table = tx.open_table(TABLE_DEF)?;
+        for i in 0..amount {
+            table.insert(
                 Local::now().timestamp_micros(),
                 match i % 10 {
                     0 => get_random_string().into_bytes(),
@@ -38,8 +41,9 @@ where
                 },
             )?;
         }
-        tx.commit()?;
     }
+    tx.commit()?;
+
     func(&db)
 }
 

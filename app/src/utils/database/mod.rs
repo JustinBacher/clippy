@@ -1,3 +1,5 @@
+pub mod clip;
+
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use itertools::Either::{Left, Right};
@@ -15,15 +17,13 @@ pub fn remove_duplicates(db: &Database, duplicates: i32) -> Result<()> {
     {
         let read_table = read_tx.open_table(TABLE_DEF)?;
         let mut table = write_tx.open_table(TABLE_DEF)?;
-
         let cursor = read_table.iter()?;
         let mut seen = HashSet::<Vec<u8>>::new();
-        let len = read_table.len()? as usize;
 
         match duplicates.cmp(&0) {
-            Greater => Left(cursor.rev().skip(len - duplicates as usize)),
-            Less => Right(cursor.skip(duplicates.unsigned_abs() as usize)),
-            Equal => Left(cursor.rev().skip(0)),
+            Greater => Left(cursor.skip(read_table.len()? as usize - duplicates as usize)),
+            Less => Right(cursor.rev().skip(duplicates.unsigned_abs() as usize)),
+            Equal => Left(cursor.skip(0)),
         }
         .flatten()
         .for_each(|(date, payload)| {
@@ -56,32 +56,35 @@ pub mod test {
     }
 
     pub fn get_db_contents(db: &Database) -> Result<Vec<Vec<u8>>> {
-        Ok(db
+        let contents = db
             .begin_read()?
             .open_table(TABLE_DEF)?
             .iter()?
             .flatten()
             .map(|entry| entry.1.value())
-            .collect_vec())
+            .collect_vec();
+        Ok(contents)
     }
 
     pub fn fill_db_and_test<F>(fill: FillWith, amount: i64, func: F) -> Result<()>
-    where F: FnOnce(&Database, Vec<Vec<u8>>) -> Result<()> {
+    where
+        F: FnOnce(&Database, Vec<Vec<u8>>) -> Result<()>,
+    {
         let tmp = NamedTempFile::new()?.into_temp_path();
         let path = tmp.to_str().unwrap().to_string();
         tmp.close()?;
         let db = Database::create(&path)?;
-        let mut all_items = Vec::<Vec<u8>>::new();
         defer!(fs::remove_file(path).unwrap());
+        let mut all_items = Vec::<Vec<u8>>::new();
 
         for i in 0..20 {
             let dummy = String::into_bytes(match fill {
                 FillWith::Dupes(dupe) => dupe.to_string(),
-                FillWith::Random => random_str(),
+                FillWith::Random => random_str(7),
                 FillWith::DupesRandomEnds(dupe) => match i {
-                    1 => random_str(),
+                    1 => random_str(7),
                     i if ![1, amount - 1].contains(&i) => dupe.to_string(),
-                    _ => random_str(),
+                    _ => random_str(7),
                 },
             });
 

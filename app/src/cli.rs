@@ -50,8 +50,6 @@ pub struct ClippyCli {
 
 #[cfg(test)]
 pub fn mock_cli<'a, I>(args: I) -> Option<ClippyCli>
-where
-    I: Iterator<Item = &'a str>,
-{
+where I: Iterator<Item = &'a str> {
     ClippyCli::try_parse_from(std::iter::once(APP_NAME).chain(args)).ok()
 }

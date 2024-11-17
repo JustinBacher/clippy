@@ -1,9 +1,9 @@
 use std::fs::File;
 
 use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
-use clap_complete::aot::{generate, Shell};
+use clap_complete::aot::{generate, Generator, Shell};
 use itertools::Either;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::ClippyCommand;
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     utils::get_config_path,
 };
 
-#[derive(ValueEnum, Clone, PartialEq, Debug, Serialize)]
+#[derive(Serialize, Deserialize, ValueEnum, Clone, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum LinuxShells {
     Bash,
@@ -52,14 +52,17 @@ impl ClippyCommand for GenCompletions {
     }
 }
 
-type CmdOrStr<'a> = Either<&'a GenCompletions, String>;
-
-pub fn write_to_config(shell: Shell, cmd: &mut Command, args: CmdOrStr) -> Result<String> {
+pub fn write_to_config(
+    shell: Shell,
+    cmd: &mut Command,
+    args: Either<&GenCompletions, String>,
+) -> Result<String> {
     let config_path = match args {
         Either::Left(a) => a.output.clone(),
         Either::Right(a) => a,
-    } + &format!("{}_completions.{}", &shell, &shell);
+    };
 
+    shell.file_name("clippy_completions");
     generate(shell, cmd, APP_NAME, &mut File::create(&config_path)?);
 
     Ok(config_path)
