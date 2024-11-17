@@ -34,7 +34,7 @@ clippy\-store(1)
 Reads a clip from stdin and remembers it for later recall
 .TP
 clippy\-gen\-completions(1)
-Lists all stored clips in clipboard
+Generate shell completions for clippy
 .TP
 clippy\-list(1)
 Lists all stored clips in clipboard

@@ -1,5 +1,5 @@
 [package]
-name = "clippy-mangen"
+name = "xtask"
 version = "0.1.0"
 authors = ["Justin Bacher <92jbach@gmail.com>"]
 
