@@ -66,3 +66,25 @@ pub fn format_entry(
 
     (date, data)
 }
+
+#[cfg(test)]
+mod test {
+    use image::{DynamicImage, Rgb, RgbImage};
+
+    use super::*;
+
+    #[test]
+    fn it_previews_images() {
+        let mut mock_image = RgbImage::new(32, 32);
+        for x in 15..=17 {
+            for y in 8..24 {
+                mock_image.put_pixel(x, y, Rgb([255, 0, 0]));
+                mock_image.put_pixel(y, x, Rgb([255, 0, 0]));
+            }
+        }
+
+        let output = detect_image(mock_image.into_vec()).unwrap();
+
+        println!("{:?}", output);
+    }
+}
