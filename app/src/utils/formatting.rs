@@ -5,8 +5,6 @@ use image::ImageReader;
 use redb::AccessGuard;
 use size::Size;
 
-use crate::prelude::Result;
-
 pub fn trim(s: &[u8]) -> Vec<u8> {
     // Original from https://stackoverflow.com/a/67358195 just changed to be used on vectors
     let from = match s.iter().position(|c| !c.is_ascii_whitespace()) {
@@ -20,31 +18,24 @@ pub fn trim(s: &[u8]) -> Vec<u8> {
 // https://stackoverflow.com/a/38461750
 pub fn truncate(s: String, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
-        None => s,
         Some((idx, _)) => s[..idx].into(),
+        None => s,
     }
 }
 
-fn get_size(payload: Vec<u8>) -> Size {
-    Size::from_bytes(size_of_val(&payload))
-}
-
-fn detect_image(payload: Vec<u8>) -> Result<Option<String>> {
+fn detect_image(payload: Vec<u8>) -> Option<String> {
     let Ok(image_reader) = ImageReader::new(Cursor::new(&payload)).with_guessed_format() else {
-        return Ok(None);
+        return None;
     };
-    let Some(format) = image_reader.format() else {
-        return Ok(None);
-    };
+    let mime_type = image_reader.format()?.to_mime_type();
     let Ok((width, height)) = image_reader.into_dimensions() else {
-        return Ok(None);
+        return None;
     };
+    let size = Size::from_bytes(size_of_val(&payload));
 
-    Ok(Some(format!(
-        "[[ binary data {} {} {width}x{height} ]]",
-        get_size(payload),
-        format.to_mime_type(),
-    )))
+    let output = format!("[[ binary data {size} {mime_type} {width}x{height} ]]");
+
+    Some(output)
 }
 
 pub fn format_entry(
@@ -53,15 +44,15 @@ pub fn format_entry(
 ) -> (String, String) {
     let date = DateTime::from_timestamp_millis(k.value()).unwrap().format("%c").to_string();
 
-    let data = if let Ok(Some(image)) = detect_image(v.value()) {
-        image
-    } else {
-        let clip = String::from_utf8(trim(&v.value())).unwrap();
-        if width == 0 {
-            clip
-        } else {
-            truncate(clip, width)
-        }
+    let data = match detect_image(v.value()) {
+        Some(image) => image,
+        None => {
+            let clip = String::from_utf8(trim(&v.value())).unwrap();
+            match width {
+                0 => clip,
+                _ => truncate(clip, width),
+            }
+        },
     };
 
     (date, data)
@@ -69,7 +60,10 @@ pub fn format_entry(
 
 #[cfg(test)]
 mod test {
-    use image::{Rgb, RgbImage};
+    use std::io::Cursor;
+
+    use image::{ImageFormat::Png, Rgb, RgbImage};
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
@@ -83,8 +77,11 @@ mod test {
             }
         }
 
-        let output = detect_image(mock_image.into_vec()).unwrap();
+        let mut buf = Box::new(Cursor::new(Vec::new()));
+        mock_image.write_to(buf.as_mut(), Png).unwrap();
 
-        println!("{:?}", output);
+        let output = detect_image(buf.into_inner()).unwrap();
+
+        assert_eq!(output, "[[ binary data 24 bytes image/png 32x32 ]]")
     }
 }
