@@ -69,7 +69,7 @@ pub fn format_entry(
 
 #[cfg(test)]
 mod test {
-    use image::{DynamicImage, Rgb, RgbImage};
+    use image::{Rgb, RgbImage};
 
     use super::*;
 

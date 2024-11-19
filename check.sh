@@ -2,5 +2,5 @@
 set -euo pipefail
 
 cargo +nightly fmt --all
-cargo check
+cargo clippy -- -D warnings
 cargo test
