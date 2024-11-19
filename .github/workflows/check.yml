@@ -31,6 +31,6 @@ jobs:
       - name: Format
         run: cargo +nightly fmt --all -- --check --verbose
       - name: Clippy
-        run: cargo clippy -- -D warnings --verbose
+        run: cargo clippy -- -D warnings
       - name: Test
         run: cargo test --verbose
