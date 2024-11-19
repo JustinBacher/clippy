@@ -1,5 +1,3 @@
-pub mod clip;
-
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use itertools::Either::{Left, Right};
@@ -11,29 +9,47 @@ pub const TABLE_DEF: TableDefinition<i64, Vec<u8>> = TableDefinition::new("clips
 
 #[allow(clippy::iter_skip_zero)]
 pub fn remove_duplicates(db: &Database, duplicates: i32) -> Result<()> {
-    let read_tx = db.begin_read()?;
-    let write_tx = db.begin_write()?;
+    let rtx = db.begin_read()?;
+    let wtx = db.begin_write()?;
 
     {
-        let read_table = read_tx.open_table(TABLE_DEF)?;
-        let mut table = write_tx.open_table(TABLE_DEF)?;
-        let cursor = read_table.iter()?;
+        let rtable = rtx.open_table(TABLE_DEF)?;
+        let mut wtable = wtx.open_table(TABLE_DEF)?;
+        let cursor = rtable.iter()?;
         let mut seen = HashSet::<Vec<u8>>::new();
 
         match duplicates.cmp(&0) {
-            Greater => Left(cursor.rev().skip(read_table.len()? as usize - duplicates as usize)),
+            Greater => Left(cursor.rev().skip(rtable.len()? as usize - duplicates as usize)),
             Less => Right(cursor.skip(duplicates.unsigned_abs() as usize)),
             Equal => Left(cursor.rev().skip(0)),
         }
         .flatten()
         .for_each(|(date, payload)| {
             if !seen.insert(payload.value()) {
-                table.remove(date.value()).ok();
+                wtable.remove(date.value()).ok();
             }
         });
     }
 
-    write_tx.commit()?;
+    wtx.commit()?;
+    Ok(())
+}
+
+pub fn ensure_db_size(db: &Database, size: u64) -> Result<()> {
+    let rtx = db.begin_write()?;
+    let wtx = db.begin_write()?;
+    {
+        let rtable = rtx.open_table(TABLE_DEF)?;
+        let mut cursor = rtable.iter()?;
+        let mut wtable = wtx.open_table(TABLE_DEF)?;
+
+        for _ in size..rtable.len()? {
+            let date = cursor.next().unwrap()?.0.value();
+            wtable.remove(date)?;
+        }
+    }
+    wtx.commit()?;
+
     Ok(())
 }
 
