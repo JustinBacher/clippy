@@ -13,7 +13,7 @@ use crate::{
     cli::ClippyCli,
     prelude::Result,
     utils::{
-        database::{remove_duplicates, TABLE_DEF},
+        database::{ensure_db_size, remove_duplicates, TABLE_DEF},
         formatting::trim,
     },
 };
@@ -22,8 +22,9 @@ const FIVE_MEGABYTES: usize = 5e6 as usize;
 
 #[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ClipboardState {
+pub enum State {
     #[default]
+    Other,
     Nil,
     Data,
     Clear,
@@ -34,25 +35,23 @@ pub enum ClipboardState {
 /// Reads a clip from stdin and remembers it for later recall
 pub struct Store {
     #[arg(env, action=ArgAction::Set, hide(true))]
-    clipboard_state: ClipboardState,
+    clipboard_state: State,
 }
 
 impl ClippyCommand for Store {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         match self.clipboard_state {
-            ClipboardState::Sensitive => todo!("Use non-persistent storage for secrets"),
-            ClipboardState::Clear | ClipboardState::Nil => {
-                println!("Should be warning");
-                warn!("Clippy does not implement \"nil\" or \"clear\" for `CLIPBOARD_STATE` Environment Variable. \
-                    Please use clippy with wl-clipboard or similar. https://github.com/bugaevc/wl-clipboard");
-            },
-            ClipboardState::Data => {
+            State::Data => {
                 let db = Database::open(&args.db_path)?;
                 let mut payload = Vec::new();
                 stdin().read_to_end(&mut payload)?;
                 store(&db, payload)?;
                 remove_duplicates(&db, args.duplicates)?;
+                ensure_db_size(&db, args.keep)?;
             },
+            State::Sensitive => todo!("Use non-persistent storage for secrets"),
+            State::Clear | State::Nil => (), // May want to implement these at some point
+            State::Other => (),
         }
         Ok(())
     }
