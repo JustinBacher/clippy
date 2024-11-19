@@ -26,11 +26,9 @@ jobs:
           prefix-key: rust
           shared-key: ubuntu-latest@debug
 
-      - name: Check
-        run: cargo check --verbose
-      - name: Format
-        run: cargo +nightly fmt --all -- --check --verbose
       - name: Clippy
         run: cargo clippy -- -D warnings
+      - name: Format
+        run: cargo +nightly fmt --all -- --check --verbose
       - name: Test
         run: cargo test --verbose

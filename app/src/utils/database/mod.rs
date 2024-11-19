@@ -1,11 +1,19 @@
+mod schema;
+
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use itertools::Either::{Left, Right};
-use redb::{Database, ReadableTable, ReadableTableMetadata, TableDefinition};
 
-use crate::prelude::Result;
+use schema::MODELS;
+use crate::{
+    cli::ClippyCli,
+    prelude::Result,
+    utils::get_cache_path,
+};
 
-pub const TABLE_DEF: TableDefinition<i64, Vec<u8>> = TableDefinition::new("clips");
+pub fn get_db(args: &ClippyCli) -> Result<native_db::Database> {
+    Builder::new().create(&MODELS, &args.db_path)
+}
 
 #[allow(clippy::iter_skip_zero)]
 pub fn remove_duplicates(db: &Database, duplicates: i32) -> Result<()> {

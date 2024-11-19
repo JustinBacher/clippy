@@ -4,7 +4,7 @@ use clap::Parser;
 use redb::{Database, ReadableTable};
 
 use super::ClippyCommand;
-use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
+use crate::{cli::ClippyCli, prelude::Result, utils::database::get_db};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Wipes all clips from clipboard
@@ -12,7 +12,7 @@ pub struct Wipe {}
 
 impl ClippyCommand for Wipe {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let db = Database::open(&args.db_path)?;
+        let db = get_db(&args)?;
         let tx = db.begin_write()?;
         {
             let table = RefCell::new(tx.open_table(TABLE_DEF)?);
