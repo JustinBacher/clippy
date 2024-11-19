@@ -25,7 +25,7 @@ pub enum ClipboardState {
 /// Lists all stored clips in clipboard
 pub struct List {
     /// Includes dates clips were taken in the output
-    #[arg(short('d'), long, action)]
+    #[arg(short('d'), long, action, default_value = "false")]
     include_dates: bool,
 
     /// Max characters to show of clips in preview. Use 0 to retain original width.
@@ -45,9 +45,8 @@ impl ClippyCommand for List {
             let count = table.len()? as usize;
 
             if table.is_empty()? {
-                return Ok(println!(
-                    "Clipboard is empty. Ready for you to start copying"
-                ));
+                println!("Clipboard is empty. Ready for you to start copying");
+                return Ok(());
             }
 
             table.iter()?.enumerate().for_each(|(i, entry)| {
