@@ -42,7 +42,7 @@ pub struct ClippyCli {
 
     /// Amount of clips to keep in database
     #[arg(short, long, default_value = "1000")]
-    pub keep: usize,
+    pub keep: u64,
 
     #[arg(short, action = clap::ArgAction::Count)]
     verbose: u8,
