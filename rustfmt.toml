@@ -1,3 +1,6 @@
+edition = "2021"
+version = "Two"
+
 newline_style = "Unix"
 indent_style = "Block"
 
@@ -5,11 +8,16 @@ blank_lines_upper_bound = 2
 
 array_width = 80
 chain_width = 80
-max_width = 100
+max_width = 120
+fn_call_width = 80
+single_line_if_else_max_width = 80
+single_line_let_else_max_width = 80
+trailing_semicolon = false
 
 imports_granularity = "Crate"
 reorder_imports = true
 group_imports = "StdExternalCrate"
+imports_layout = "HorizontalVertical"
 
 match_arm_blocks = false
 match_block_trailing_comma = true
@@ -17,3 +25,11 @@ match_block_trailing_comma = true
 use_field_init_shorthand = true
 reorder_impl_items = true
 where_single_line = false
+fn_single_line = true
+force_multiline_blocks = true
+condense_wildcard_suffixes = true
+overflow_delimited_expr = true
+
+format_strings = true
+normalize_doc_attributes = true
+wrap_comments = true
