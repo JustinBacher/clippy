@@ -1,3 +1,4 @@
+extern crate anyhow;
 extern crate clap;
 extern crate clap_complete;
 extern crate clap_mangen;
@@ -6,10 +7,11 @@ extern crate itertools;
 
 use std::{env, fs::write, process::exit};
 
+use anyhow::Result;
 use clap::CommandFactory;
 use clap_complete::Shell::*;
 use clap_mangen::Man;
-use clippy::{cli::ClippyCli, commands::completions::write_to_config, prelude::Result};
+use clippy::{cli::ClippyCli, commands::completions::write_to_config};
 use itertools::Either::Right;
 
 fn main() -> Result<()> {

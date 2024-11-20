@@ -1,10 +1,8 @@
-use std::cell::RefCell;
-
+use anyhow::Result;
 use clap::Parser;
-use redb::{Database, ReadableTable};
 
 use super::ClippyCommand;
-use crate::{cli::ClippyCli, prelude::Result, utils::database::get_db};
+use crate::{cli::ClippyCli, database::get_db};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Wipes all clips from clipboard
@@ -12,17 +10,9 @@ pub struct Wipe {}
 
 impl ClippyCommand for Wipe {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let db = get_db(&args)?;
-        let tx = db.begin_write()?;
-        {
-            let table = RefCell::new(tx.open_table(TABLE_DEF)?);
-            let read_table = table.borrow();
-            let cursor = read_table.iter()?;
-
-            cursor.for_each(|entry| {
-                table.borrow_mut().remove(entry.as_ref().unwrap().0.value()).unwrap();
-            });
-        }
+        let db = get_db(args)?;
+        let tx = db.rw_transaction()?;
+        tx.drain();
         tx.commit()?;
 
         Ok(())

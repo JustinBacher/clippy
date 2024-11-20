@@ -1,14 +1,14 @@
 use std::io::{stdout, Write};
 
+use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use redb::{Database, ReadableTable, ReadableTableMetadata};
 use serde::Serialize;
 
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
-    prelude::Result,
-    utils::{database::TABLE_DEF, formatting::format_entry},
+    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+    utils::formatting::format_entry,
 };
 
 #[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
@@ -38,19 +38,20 @@ pub struct List {
 impl ClippyCommand for List {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let mut out = stdout();
-        let db = Database::create(&args.db_path)?;
-        let tx = db.begin_read()?;
+        let db = get_db(args)?;
+        let tx = db.r_transaction()?;
         {
-            let table = tx.open_table(TABLE_DEF)?;
-            let count = table.len()? as usize;
+            let count = tx.length()? as usize;
 
-            if table.is_empty()? {
+            if count == 0 {
                 println!("Clipboard is empty. Ready for you to start copying");
                 return Ok(());
             }
 
-            table.iter()?.enumerate().for_each(|(i, entry)| {
-                let (date, payload) = format_entry(entry.unwrap(), self.preview_width);
+            let it = tx.scan().primary()?;
+            let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
+            cursor.flatten().enumerate().for_each(|(i, entry)| {
+                let (date, payload) = format_entry(&entry, self.preview_width);
 
                 match self.include_dates {
                     true => out.write_fmt(format_args!("{}. {}:\t{}\n", count - i, date, payload)),
@@ -68,7 +69,7 @@ impl ClippyCommand for List {
 mod test {
     use crate::{
         cli::mock_cli,
-        utils::database::test::{fill_db_and_test, get_db_contents, FillWith},
+        database::test::{fill_db_and_test, get_db_contents, FillWith},
     };
 
     #[test]

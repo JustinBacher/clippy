@@ -38,7 +38,7 @@ pub struct ClippyCli {
     /// Negative values remove x amount of duplicates from the end.
     /// 0 will retain only unique clips. Removing any duplicates.
     #[arg(short, long, alias("dupes"), default_value = "0")]
-    pub duplicates: i32,
+    pub duplicates: i64,
 
     /// Amount of clips to keep in database
     #[arg(short, long, default_value = "1000")]

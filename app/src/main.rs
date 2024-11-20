@@ -1,9 +1,9 @@
+use anyhow::Result;
 use clap::Parser;
-pub use clippy::{cli, commands, error, prelude, utils};
+pub use clippy::{cli, commands};
 use clippy::{
     cli::{ClippyCli, Commands},
     commands::ClippyCommand,
-    prelude::Result,
 };
 
 fn main() -> Result<()> {
