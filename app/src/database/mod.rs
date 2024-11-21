@@ -3,7 +3,7 @@ mod schema;
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use anyhow::Result;
-use itertools::Either::{Left, Right};
+use itertools::Itertools;
 
 use crate::cli::ClippyCli;
 pub use crate::database::schema::{
@@ -28,7 +28,6 @@ impl<'txn> EasyLength<'txn, ClipEntry> for RwTransaction<'txn> {
 
 pub fn get_db(args: &ClippyCli) -> Result<native_db::Database> {
     let db = Builder::new().create(&MODELS, &args.db_path)?;
-
     let tx = db.rw_transaction()?;
     tx.migrate::<ClipEntry>()?;
     tx.commit()?;
@@ -36,47 +35,57 @@ pub fn get_db(args: &ClippyCli) -> Result<native_db::Database> {
     Ok(db)
 }
 
-#[allow(clippy::iter_skip_zero)]
 pub fn remove_duplicates(db: &Database, duplicates: i64) -> Result<()> {
     let tx = db.rw_transaction()?;
-    {
-        let it = tx.scan().primary()?;
-        let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-        let mut seen = HashSet::<String>::new();
+    let mut seen = HashSet::<String>::new();
 
-        match duplicates.cmp(&0) {
-            Greater => Left(cursor.rev().skip(tx.length()? as usize - duplicates as usize)),
-            Less => Right(cursor.skip(duplicates.unsigned_abs() as usize)),
-            Equal => Left(cursor.rev().skip(0)),
-        }
-        .flatten()
-        .for_each(|entry| {
-            if !seen.insert(entry.payload.to_string()) {
-                tx.remove(entry).ok();
-            }
-        });
+    match duplicates.cmp(&0) {
+        Greater => {
+            tx
+                .scan()
+                .primary()?
+                .all()?
+                .skip(tx.length()? as usize - duplicates)
+                .flatten()
+                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
+                .for_each(|entry| tx.remove(entry).ok());
+        },
+        Less => {
+            tx
+                .scan()
+                .primary()?
+                .all()?
+                .take(duplicates.unsigned_abs() as usize)
+                .flatten()
+                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
+                .for_each(|entry| tx.remove(entry).ok());
+        },
+        Equal => {
+            tx
+                .scan()
+                .primary()?
+                .all()?
+                .flatten()
+                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
+                .for_each(|entry| tx.remove(entry).ok());
+        },
     }
-    tx.commit()?;
-
-    Ok(())
+    tx.commit()?
 }
 
 pub fn ensure_db_size(db: &Database, limit: u64) -> Result<()> {
     let tx = db.rw_transaction()?;
-    {
-        let it = tx.scan().primary()?;
-        let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-        cursor
-            .rev()
-            .take(tx.length()? as usize - limit as usize)
-            .flatten()
-            .for_each(|entry| {
-                tx.remove(entry).unwrap();
-            })
-    }
-    tx.commit()?;
-
-    Ok(())
+    tx
+        .scan()
+        .primary()?
+        .all()?;
+        .rev()
+        .take(tx.length()? as usize - limit as usize)
+        .flatten()
+        .for_each(|entry| {
+            tx.remove(entry).unwrap();
+        })
+    tx.commit()?
 }
 
 #[cfg(test)]
