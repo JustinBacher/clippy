@@ -1,7 +1,8 @@
+use anyhow::Result;
 use clap::Parser;
 
 use super::ClippyCommand;
-use crate::{cli::ClippyCli, prelude::*};
+use crate::cli::ClippyCli;
 
 #[derive(Parser, Debug, PartialEq)]
 #[command()]

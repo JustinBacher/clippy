@@ -9,6 +9,7 @@ pub mod wipe;
 
 use std::{ops::Sub, str::FromStr};
 
+use anyhow::Result;
 pub use completions::GenCompletions;
 use derive_more::Display;
 pub use list::List;
@@ -19,10 +20,7 @@ pub use store::Store;
 pub use version::Version;
 pub use wipe::Wipe;
 
-use crate::{
-    cli::ClippyCli,
-    prelude::{Error, Result},
-};
+use crate::cli::ClippyCli;
 
 pub trait ClippyCommand {
     fn execute(&self, _: &ClippyCli) -> Result<()> {
@@ -37,10 +35,23 @@ pub trait ClippyCommand {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]
 pub struct GreedyInt(usize);
 
-impl FromStr for GreedyInt {
-    type Err = Error;
+use std::{error::Error, fmt};
 
-    fn from_str(s: &str) -> Result<GreedyInt> {
+#[derive(Debug)]
+pub struct GreedyParseError;
+
+impl Error for GreedyParseError {}
+
+impl fmt::Display for GreedyParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oh no, something bad went down")
+    }
+}
+
+impl FromStr for GreedyInt {
+    type Err = GreedyParseError;
+
+    fn from_str(s: &str) -> Result<GreedyInt, GreedyParseError> {
         Ok(GreedyInt(
             s.chars()
                 .take_while(|c| c.is_ascii_digit())

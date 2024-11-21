@@ -1,4 +1,3 @@
-pub mod database;
 pub mod formatting;
 
 #[allow(clippy::module_inception)]

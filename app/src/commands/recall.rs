@@ -1,8 +1,11 @@
+use anyhow::Result;
 use clap::Parser;
-use redb::{Database, ReadableTable, ReadableTableMetadata};
 
 use super::{ClippyCommand, GreedyInt};
-use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
+use crate::{
+    cli::ClippyCli,
+    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(allow_missing_positional(true))]
@@ -20,20 +23,20 @@ pub struct Recall {
 
 impl ClippyCommand for Recall {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let db = Database::create(&args.db_path)?;
-        let tx = db.begin_read()?;
+        let error_text = "There is no clip with that id";
+        let db = get_db(&args.db_path)?;
+        let tx = db.r_transaction()?;
 
-        {
-            let table = tx.open_table(TABLE_DEF)?;
-
-            if table.is_empty()? {
-                println!("There is no clip with that id");
-                return Ok(());
-            }
-
-            let clip = table.iter()?.nth(&self.id - 1).unwrap()?.1.value();
-            println!("{}", std::str::from_utf8(clip.as_slice()).unwrap());
+        if tx.length()? == 0 {
+            println!("{error_text}");
+            return Ok(());
         }
+
+        let it = tx.scan().primary()?;
+        let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
+
+        let clip = cursor.flatten().nth(&self.id - 1).expect(error_text).text()?;
+        println!("{clip}");
 
         Ok(())
     }

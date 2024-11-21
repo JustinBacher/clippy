@@ -9,8 +9,9 @@ license = "MIT"
 publish = false
 
 [dependencies]
+anyhow = "1.0.93"
 camino = "1"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = [
     "cargo",
     "derive",
@@ -25,13 +26,13 @@ image = "0.25"
 impl-trait-for-tuples = "0.2.2"
 itertools = "0.13"
 log = "0.4"
+native_db = "0.8.1"
+native_model = "0.4.20"
+once_cell = "1.20.2"
 pretty_env_logger = "0.5"
 rand = "0.8"
-redb = "2"
-scopeguard = "1"
 serde = { version = "1.0", features = ["derive", "serde_derive"] }
 size = "0.4.1"
-thiserror = "2.0"
 tracing = "0.1"
 
 [dev-dependencies]
@@ -39,7 +40,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 mockall = "0.13"
 pretty_assertions = "1"
 rand = "0.8"
-tempfile = "3.14"
+shortcut_assert_fs = "0.1.0"
 trycmd = "0.15"
 gnuplot = "0.0.44"
 

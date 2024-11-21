@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use anyhow::Result;
 use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
 use clap_complete::aot::{generate, Generator, Shell};
 use itertools::Either;
@@ -8,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use super::ClippyCommand;
 use crate::{
     cli::{ClippyCli, APP_NAME},
-    prelude::Result,
     utils::get_config_path,
 };
 
