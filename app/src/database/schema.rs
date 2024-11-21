@@ -43,11 +43,17 @@ pub mod schemas {
 
         #[native_db]
         #[native_model(id = 1, version = 1)]
-        #[derive(Serialize, Deserialize, PartialEq, Debug, Eq, Hash, Clone)]
+        #[derive(Serialize, Deserialize, Eq, Debug, Hash, Clone)]
         pub struct ClipEntry {
             #[primary_key]
             pub epoch: DateTime,
             pub payload: String,
+        }
+    }
+
+    impl PartialEq for ClipEntry {
+        fn eq(&self, other: &Self) -> bool {
+            self.payload == other.payload
         }
     }
 

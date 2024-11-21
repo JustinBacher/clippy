@@ -3,7 +3,6 @@ mod schema;
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use anyhow::Result;
-use itertools::Itertools;
 
 use crate::cli::ClippyCli;
 pub use crate::database::schema::{
@@ -36,56 +35,68 @@ pub fn get_db(args: &ClippyCli) -> Result<native_db::Database> {
 }
 
 pub fn remove_duplicates(db: &Database, duplicates: i64) -> Result<()> {
-    let tx = db.rw_transaction()?;
+    let rtx = db.r_transaction()?;
+    let wtx = db.rw_transaction()?;
     let mut seen = HashSet::<String>::new();
 
     match duplicates.cmp(&0) {
         Greater => {
-            tx
-                .scan()
-                .primary()?
+            rtx.scan()
+                .primary::<ClipEntry>()?
                 .all()?
-                .skip(tx.length()? as usize - duplicates)
+                .rev()
+                .take(duplicates as usize)
                 .flatten()
-                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
-                .for_each(|entry| tx.remove(entry).ok());
+                // .take_while_inclusive(|entry| !seen.insert(entry.payload.clone()))
+                .for_each(|entry| {
+                    if !seen.insert(entry.payload.clone()) {
+                        wtx.remove(entry).unwrap();
+                    }
+                });
         },
         Less => {
-            tx
-                .scan()
-                .primary()?
+            rtx.scan()
+                .primary::<ClipEntry>()?
                 .all()?
                 .take(duplicates.unsigned_abs() as usize)
                 .flatten()
-                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
-                .for_each(|entry| tx.remove(entry).ok());
+                // .take_while_inclusive(|entry| !seen.insert(entry.payload.clone()))
+                .for_each(|entry| {
+                    if !seen.insert(entry.payload.clone()) {
+                        wtx.remove(entry).unwrap();
+                    }
+                });
         },
         Equal => {
-            tx
-                .scan()
-                .primary()?
+            rtx.scan()
+                .primary::<ClipEntry>()?
                 .all()?
+                .rev()
                 .flatten()
-                .take_while_ref(|entry| !seen.insert(entry.payload.to_string()))
-                .for_each(|entry| tx.remove(entry).ok());
+                // .take_while_inclusive(|entry| !seen.insert(entry.payload.clone()))
+                .for_each(|entry| {
+                    if !seen.insert(entry.payload.clone()) {
+                        wtx.remove(entry).unwrap();
+                    }
+                });
         },
     }
-    tx.commit()?
+    wtx.commit()?;
+    Ok(())
 }
 
 pub fn ensure_db_size(db: &Database, limit: u64) -> Result<()> {
     let tx = db.rw_transaction()?;
-    tx
-        .scan()
-        .primary()?
-        .all()?;
-        .rev()
-        .take(tx.length()? as usize - limit as usize)
+    tx.scan()
+        .primary::<ClipEntry>()?
+        .all()?
+        .take(limit as usize)
         .flatten()
         .for_each(|entry| {
             tx.remove(entry).unwrap();
-        })
-    tx.commit()?
+        });
+    tx.commit()?;
+    Ok(())
 }
 
 #[cfg(test)]
