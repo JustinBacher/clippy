@@ -24,6 +24,7 @@ pub struct Search {
     #[arg(short('w'), long, default_value = "100")]
     /// Max characters to show of clips in preview. Use 0 to retain original width.
     ///
+    ///
     /// This does not affect what is put back into the clipboard
     preview_width: usize,
 }
@@ -31,7 +32,7 @@ pub struct Search {
 impl ClippyCommand for Search {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let mut out = stdout();
-        let db = get_db(args)?;
+        let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
         {
             let count = tx.length()? as usize;

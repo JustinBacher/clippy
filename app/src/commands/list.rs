@@ -38,7 +38,7 @@ pub struct List {
 impl ClippyCommand for List {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let mut out = stdout();
-        let db = get_db(args)?;
+        let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
         {
             let count = tx.length()? as usize;

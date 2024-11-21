@@ -38,7 +38,7 @@ impl ClippyCommand for Store {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         match self.clipboard_state {
             State::Data => {
-                let db = get_db(args)?;
+                let db = get_db(&args.db_path)?;
                 let mut payload = Vec::new();
                 stdin().read_to_end(&mut payload)?;
                 store(&db, payload.as_slice())?;
@@ -60,7 +60,7 @@ pub fn store(db: &Database, payload: &[u8]) -> Result<()> {
 
     let tx = db.rw_transaction()?;
     {
-        tx.insert(ClipEntry::new(std::str::from_utf8(payload)?))?;
+        tx.insert(ClipEntry::new(payload))?;
     }
     tx.commit()?;
     Ok(())

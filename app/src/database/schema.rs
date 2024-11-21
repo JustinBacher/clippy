@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 pub use schemas::ClipEntry;
 
 pub mod schemas {
+    use anyhow::Result;
     use native_db::{native_db, Key, ToKey};
     use native_model::{native_model, Model};
     use serde::{Deserialize, Serialize};
@@ -43,25 +44,25 @@ pub mod schemas {
 
         #[native_db]
         #[native_model(id = 1, version = 1)]
-        #[derive(Serialize, Deserialize, Eq, Debug, Hash, Clone)]
+        #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Hash, Clone)]
         pub struct ClipEntry {
             #[primary_key]
             pub epoch: DateTime,
-            pub payload: String,
+            pub payload: Vec<u8>,
         }
-    }
 
-    impl PartialEq for ClipEntry {
-        fn eq(&self, other: &Self) -> bool {
-            self.payload == other.payload
-        }
-    }
+        impl ClipEntry {
+            pub fn new(payload: &[u8]) -> Self {
+                Self {
+                    epoch: v1::DateTime::now(),
+                    payload: payload.to_vec(),
+                }
+            }
 
-    impl ClipEntry {
-        pub fn new(payload: &str) -> Self {
-            Self {
-                epoch: v1::DateTime::now(),
-                payload: payload.to_string(),
+            pub fn text(&self) -> Result<String> {
+                let str_ified = std::str::from_utf8(&self.payload)?;
+
+                Ok(str_ified.to_string())
             }
         }
     }

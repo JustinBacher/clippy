@@ -18,7 +18,7 @@ pub struct Remove {
 impl ClippyCommand for Remove {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let position: usize = self.id.into();
-        let db = get_db(args)?;
+        let db = get_db(&args.db_path)?;
         let tx = db.rw_transaction()?;
 
         {

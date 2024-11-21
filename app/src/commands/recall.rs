@@ -24,7 +24,7 @@ pub struct Recall {
 impl ClippyCommand for Recall {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let error_text = "There is no clip with that id";
-        let db = get_db(args)?;
+        let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
 
         if tx.length()? == 0 {
@@ -35,8 +35,8 @@ impl ClippyCommand for Recall {
         let it = tx.scan().primary()?;
         let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
 
-        let clip = cursor.flatten().nth(&self.id - 1).expect(error_text).payload;
-        println!("{}", clip);
+        let clip = cursor.flatten().nth(&self.id - 1).expect(error_text).text()?;
+        println!("{clip}");
 
         Ok(())
     }

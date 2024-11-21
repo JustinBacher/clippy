@@ -10,7 +10,7 @@ pub struct Wipe {}
 
 impl ClippyCommand for Wipe {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let db = get_db(args)?;
+        let db = get_db(&args.db_path)?;
         let tx = db.rw_transaction()?;
         tx.drain();
         tx.commit()?;

@@ -16,14 +16,14 @@ pub fn trim(s: &[u8]) -> Vec<u8> {
 }
 
 // https://stackoverflow.com/a/38461750
-pub fn truncate(s: String, max_chars: usize) -> String {
+pub fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         Some((idx, _)) => s[..idx].into(),
-        None => s,
+        None => s.to_string(),
     }
 }
 
-fn detect_image(payload: &str) -> Option<String> {
+fn detect_image(payload: &[u8]) -> Option<String> {
     let Ok(image_reader) = ImageReader::new(Cursor::new(&payload)).with_guessed_format() else {
         return None;
     };
@@ -44,8 +44,8 @@ pub fn format_entry(entry: &ClipEntry, width: usize) -> (String, String) {
     let data = match detect_image(&entry.payload) {
         Some(image) => image,
         None => match width {
-            0 => entry.payload.to_string(),
-            _ => truncate(entry.payload.to_string(), width),
+            0 => entry.text().unwrap(),
+            _ => truncate(&entry.text().unwrap(), width),
         },
     };
 
@@ -74,8 +74,8 @@ mod test {
         let mut buf = Box::new(Cursor::new(Vec::new()));
         mock_image.write_to(buf.as_mut(), Png).unwrap();
 
-        let output = detect_image(std::str::from_utf8(&buf.into_inner()).unwrap()).unwrap();
+        let output = detect_image(buf.into_inner().as_slice()).unwrap();
 
-        assert_eq!(output, "[[ binary data 24 bytes image/png 32x32 ]]")
+        assert_eq!(output, "[[ binary data 233 bytes image/png 32x32 ]]")
     }
 }
