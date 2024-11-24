@@ -38,10 +38,8 @@ fn detect_image(payload: &[u8]) -> Option<String> {
     Some(output)
 }
 
-pub fn format_entry(entry: &ClipEntry, width: usize) -> (String, String) {
-    let date = entry.epoch.into_inner().format("%c").to_string();
-
-    let data = match detect_image(&entry.payload) {
+pub fn format_entry(entry: &ClipEntry, width: usize, include_dates: bool) -> String {
+    let payload = match detect_image(&entry.payload) {
         Some(image) => image,
         None => match width {
             0 => entry.text().unwrap(),
@@ -49,7 +47,11 @@ pub fn format_entry(entry: &ClipEntry, width: usize) -> (String, String) {
         },
     };
 
-    (date, data)
+    let date = entry.epoch.0.format("%c").to_string();
+    match include_dates {
+        true => format!("{}:\t{}", date, payload),
+        false => payload,
+    }
 }
 
 #[cfg(test)]

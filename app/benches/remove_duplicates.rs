@@ -1,9 +1,8 @@
-use std::hint::black_box;
-
 use anyhow::Result;
 use camino::Utf8Path;
+use chrono::Local;
 use clippy::database::{get_db, remove_duplicates, ClipEntry, Database};
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::{distributions::Alphanumeric, Rng};
 use shortcut_assert_fs::TmpFs;
 
@@ -26,7 +25,11 @@ where
                 0 => &get_random_string(),
                 _ => "asdf",
             };
-            tx.insert(ClipEntry::new(payload.as_bytes()))?;
+            tx.insert(ClipEntry {
+                epoch: Local::now().into(),
+                payload: payload.as_bytes().to_vec(),
+                application: None,
+            })?;
         }
     }
     tx.commit()?;
@@ -36,8 +39,8 @@ where
 
 #[allow(clippy::iter_skip_zero)]
 fn remove_dupes_old(c: &mut Criterion) {
-    let amount: i64 = black_box(1_000);
-    let dedupe_amount: i64 = black_box(100);
+    let amount: i64 = black_box(100);
+    let dedupe_amount: i64 = black_box(10);
     c.bench_function("dupes", |b| {
         b.iter(|| {
             create_and_fill_db(amount, |db| {
@@ -50,8 +53,8 @@ fn remove_dupes_old(c: &mut Criterion) {
 
 #[allow(clippy::iter_skip_zero)]
 fn remove_dupes_iter(c: &mut Criterion) {
-    let amount: i64 = black_box(1_000);
-    let dedupe_amount: i64 = black_box(100);
+    let amount: i64 = black_box(100);
+    let dedupe_amount: i64 = black_box(10);
     c.bench_function("dupes", |b| {
         b.iter(|| {
             create_and_fill_db(amount, |db| {

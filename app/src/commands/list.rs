@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
-    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+    database::{get_db, ClipEntry, TableLen},
     utils::formatting::format_entry,
 };
 
@@ -40,26 +40,20 @@ impl ClippyCommand for List {
         let mut out = stdout();
         let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
-        {
-            let count = tx.length()? as usize;
 
-            if count == 0 {
-                println!("Clipboard is empty. Ready for you to start copying");
-                return Ok(());
-            }
-
-            let it = tx.scan().primary()?;
-            let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-            cursor.flatten().enumerate().for_each(|(i, entry)| {
-                let (date, payload) = format_entry(&entry, self.preview_width);
-
-                match self.include_dates {
-                    true => out.write_fmt(format_args!("{}. {}:\t{}\n", count - i, date, payload)),
-                    false => out.write_fmt(format_args!("{}. {}\n", count - i, payload)),
-                }
-                .unwrap();
-            });
+        if tx.length()? == 0 {
+            return Ok(println!("Clipboard is empty"));
         }
+
+        tx.scan()
+            .primary::<ClipEntry>()?
+            .all()?
+            .flatten()
+            .enumerate()
+            .for_each(|(i, entry)| {
+                let preview = format_entry(&entry, self.preview_width, self.include_dates);
+                writeln!(out, "{i} {}", preview,).unwrap();
+            });
 
         Ok(())
     }
@@ -79,9 +73,7 @@ mod test {
 
             let after = get_db_contents(db)?;
 
-            assert_eq!(after, before);
-
-            Ok(())
+            Ok(assert_eq!(after, before))
         })
         .unwrap();
     }

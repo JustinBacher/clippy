@@ -5,7 +5,7 @@ use derive_more::From;
 use super::{ClippyCommand, GreedyInt};
 use crate::{
     cli::ClippyCli,
-    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+    database::{get_db, ClipEntry, TableLen},
 };
 
 #[derive(Parser, Debug, PartialEq)]
@@ -29,12 +29,15 @@ impl ClippyCommand for Remove {
         }
 
         {
-            let it = tx.scan().primary()?;
-            let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-            tx.remove(cursor.flatten().nth(position - 1).expect("No clip found at that index"))?;
+            tx.remove(
+                tx.scan()
+                    .primary::<ClipEntry>()?
+                    .all()?
+                    .flatten()
+                    .nth(position - 1)
+                    .expect("No clip found at that index"),
+            )?;
         }
-        tx.commit()?;
-
-        Ok(())
+        Ok(tx.commit()?)
     }
 }

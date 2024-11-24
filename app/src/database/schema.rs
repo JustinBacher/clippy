@@ -1,12 +1,33 @@
+use bincode;
 pub use native_db::*;
 use once_cell::sync::Lazy;
 pub use schemas::ClipEntry;
+use serde::{Deserialize, Serialize};
+
+struct Bincode;
+
+impl<T: Serialize> native_model::Encode<T> for Bincode {
+    type Error = bincode::error::EncodeError;
+
+    fn encode(obj: &T) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        bincode::serde::encode_to_vec(obj, bincode::config::standard())
+    }
+}
+
+impl<T: for<'a> Deserialize<'a>> native_model::Decode<T> for Bincode {
+    type Error = bincode::error::DecodeError;
+
+    fn decode(data: Vec<u8>) -> Result<T, bincode::error::DecodeError> {
+        Ok(bincode::serde::decode_from_slice(&data, bincode::config::standard())?.0)
+    }
+}
 
 pub mod schemas {
     use anyhow::Result;
-    use native_db::{native_db, Key, ToKey};
     use native_model::{native_model, Model};
-    use serde::{Deserialize, Serialize};
+
+    use super::*;
+    use crate::utils::detection::get_active_window;
 
     pub type ClipEntry = v1::ClipEntry;
 
@@ -14,15 +35,17 @@ pub mod schemas {
         use super::*;
 
         #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Hash, Copy)]
-        pub struct DateTime(chrono::DateTime<chrono::Local>);
+        pub struct DateTime(pub chrono::DateTime<chrono::Local>);
 
         impl DateTime {
             pub fn now() -> Self {
                 Self(chrono::Local::now())
             }
+        }
 
-            pub fn into_inner(self) -> chrono::DateTime<chrono::Local> {
-                self.0
+        impl From<chrono::DateTime<chrono::Local>> for DateTime {
+            fn from(date: chrono::DateTime<chrono::Local>) -> Self {
+                Self(date)
             }
         }
 
@@ -43,12 +66,13 @@ pub mod schemas {
         }
 
         #[native_db]
-        #[native_model(id = 1, version = 1)]
+        #[native_model(id = 1, version = 1, with = Bincode)]
         #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Hash, Clone)]
         pub struct ClipEntry {
             #[primary_key]
             pub epoch: DateTime,
             pub payload: Vec<u8>,
+            pub application: Option<String>,
         }
 
         impl ClipEntry {
@@ -56,6 +80,7 @@ pub mod schemas {
                 Self {
                     epoch: v1::DateTime::now(),
                     payload: payload.to_vec(),
+                    application: get_active_window(),
                 }
             }
 
@@ -63,6 +88,26 @@ pub mod schemas {
                 let str_ified = std::str::from_utf8(&self.payload)?;
 
                 Ok(str_ified.to_string())
+            }
+
+            pub fn contains(&self, maybe_query: &Option<String>) -> bool {
+                if let Some(query) = maybe_query {
+                    if self.text().is_ok_and(|text| text.contains(query)) {
+                        return true;
+                    }
+                }
+
+                false
+            }
+
+            pub fn was_copied_from_app(&self, maybe_title: &Option<String>) -> bool {
+                if let Some(title) = maybe_title {
+                    if self.application.as_deref().unwrap_or_default().contains(title) {
+                        return true;
+                    }
+                }
+
+                false
             }
         }
     }

@@ -71,7 +71,7 @@ mod test {
 
     use crate::database::{
         test::{fill_db_and_test, get_db_contents, FillWith},
-        EasyLength,
+        TableLen,
     };
 
     #[test]

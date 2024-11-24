@@ -6,7 +6,7 @@ use clap::Parser;
 use super::ClippyCommand;
 use crate::{
     cli::ClippyCli,
-    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+    database::{get_db, ClipEntry, TableLen},
     utils::formatting::format_entry,
 };
 
@@ -15,7 +15,11 @@ use crate::{
 pub struct Search {
     #[arg(short, long)]
     /// The query to search for in clipboard history
-    query: String,
+    query: Option<String>,
+
+    #[arg(short, long, visible_alias("app"))]
+    /// Filter search results to clips from a specific application.
+    application: Option<String>,
 
     #[arg(short('d'), long, action)]
     /// Includes dates clips were taken in the output
@@ -34,24 +38,23 @@ impl ClippyCommand for Search {
         let mut out = stdout();
         let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
-        {
-            let count = tx.length()? as usize;
 
-            let it = tx.scan().primary()?;
-            let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-            cursor
-                .flatten()
-                .enumerate()
-                .map(|(i, entry)| (i, format_entry(&entry, self.preview_width)))
-                .filter(|(_, entry)| entry.1.contains(&self.query))
-                .for_each(|(i, entry)| {
-                    let (date, payload) = entry;
-                    match self.include_dates {
-                        true => writeln!(out, "{}. {}:\t{}", count - i, date, payload).unwrap(),
-                        false => writeln!(out, "{}. {}\n", count - i, payload).unwrap(),
-                    }
-                });
+        if tx.length()? == 0 {
+            return Ok(println!("Clipboard is empty"));
         }
+
+        tx.scan()
+            .primary::<ClipEntry>()?
+            .all()?
+            .flatten()
+            .enumerate()
+            .filter(|(_, entry)| {
+                entry.contains(&self.query) & entry.was_copied_from_app(&self.application)
+            })
+            .for_each(|(i, entry)| {
+                let preview = format_entry(&entry, self.preview_width, self.include_dates);
+                writeln!(out, "{i} {}", preview,).unwrap();
+            });
         Ok(())
     }
 }

@@ -9,16 +9,16 @@ pub use crate::database::schema::{
     transaction::{query::PrimaryScanIterator, RTransaction, RwTransaction},
     Builder, ClipEntry, Database, ToInput, MODELS,
 };
-pub trait EasyLength<'txn, T: ToInput> {
+pub trait TableLen<'txn, T: ToInput> {
     fn length(&self) -> Result<u64>;
 }
 
-impl<'txn> EasyLength<'txn, ClipEntry> for RTransaction<'txn> {
+impl<'txn> TableLen<'txn, ClipEntry> for RTransaction<'txn> {
     fn length(&self) -> Result<u64> {
         Ok(self.len().primary::<ClipEntry>()?)
     }
 }
-impl<'txn> EasyLength<'txn, ClipEntry> for RwTransaction<'txn> {
+impl<'txn> TableLen<'txn, ClipEntry> for RwTransaction<'txn> {
     fn length(&self) -> Result<u64> {
         Ok(self.len().primary::<ClipEntry>()?)
     }
@@ -43,33 +43,35 @@ pub fn remove_duplicates(db: &Database, duplicates: i64) -> Result<()> {
             rtx.scan()
                 .primary::<ClipEntry>()?
                 .all()?
-                .rev()
                 .take(duplicates as usize)
                 .flatten()
+                .filter(|entry| !seen.insert(entry.payload.to_vec()))
                 .for_each(|entry| {
-                    if !seen.insert(entry.payload.clone()) {
-                        wtx.remove(entry).unwrap();
-                    }
+                    wtx.remove(entry).ok();
                 });
         },
         Less => {
             rtx.scan()
                 .primary::<ClipEntry>()?
                 .all()?
+                .rev()
                 .take(duplicates.unsigned_abs() as usize)
                 .flatten()
+                .filter(|entry| !seen.insert(entry.payload.to_vec()))
                 .for_each(|entry| {
-                    if !seen.insert(entry.payload.clone()) {
-                        wtx.remove(entry).unwrap();
-                    }
+                    wtx.remove(entry).ok();
                 });
         },
         Equal => {
-            rtx.scan().primary::<ClipEntry>()?.all()?.rev().flatten().for_each(|entry| {
-                if !seen.insert(entry.payload.clone()) {
-                    wtx.remove(entry).unwrap();
-                }
-            });
+            rtx.scan()
+                .primary::<ClipEntry>()?
+                .all()?
+                .rev()
+                .flatten()
+                .filter(|entry| !seen.insert(entry.payload.to_vec()))
+                .for_each(|entry| {
+                    wtx.remove(entry).ok();
+                });
         },
     }
     wtx.commit()?;

@@ -4,7 +4,7 @@ use clap::Parser;
 use super::{ClippyCommand, GreedyInt};
 use crate::{
     cli::ClippyCli,
-    database::{get_db, ClipEntry, EasyLength, PrimaryScanIterator},
+    database::{get_db, ClipEntry, PrimaryScanIterator, TableLen},
 };
 
 #[derive(Parser, Debug, PartialEq)]
