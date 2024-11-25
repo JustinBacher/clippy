@@ -24,11 +24,11 @@ fn main() -> Result<()> {
 
 fn try_main() -> Result<()> {
     match env::args().nth(1).as_deref() {
-        Some("mangen") => man_gen()?,
+        Some("man") => man_gen()?,
         Some("completions") => {
             let out_dir = env!("CARGO_MANIFEST_DIR");
             for shell in [Bash, Zsh, Fish] {
-                write_to_config(shell, &mut ClippyCli::command(), Right(out_dir.to_string()))?;
+                write_to_config(shell, &mut ClippyCli::command(), Right(&out_dir))?;
             }
         },
         _ => panic!("Invalid argument passed"),
