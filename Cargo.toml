@@ -1,6 +1,6 @@
 [workspace]
-members = ["app", "xtask"]
-default-members = ["app/"]
+members = ["app", "gen", "daemon"]
+default-members = ["app/", "daemon/"]
 resolver = "2"
 
 [lints.clippy]

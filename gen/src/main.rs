@@ -11,7 +11,10 @@ use anyhow::Result;
 use clap::CommandFactory;
 use clap_complete::Shell::*;
 use clap_mangen::Man;
-use clippy::{cli::ClippyCli, commands::completions::write_to_config};
+use clippy::{
+    cli::ClippyCli,
+    commands::completions::{write_to_config, LinuxShellsIter},
+};
 use itertools::Either::Right;
 
 fn main() -> Result<()> {
@@ -27,7 +30,7 @@ fn try_main() -> Result<()> {
         Some("man") => man_gen()?,
         Some("completions") => {
             let out_dir = env!("CARGO_MANIFEST_DIR");
-            for shell in [Bash, Zsh, Fish] {
+            for shell in LinuxShellsIter {
                 write_to_config(shell, &mut ClippyCli::command(), Right(&out_dir))?;
             }
         },
