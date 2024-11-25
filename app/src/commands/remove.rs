@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use derive_more::From;
 
 use super::{ClippyCommand, GreedyInt};
 use crate::{
@@ -21,23 +20,20 @@ impl ClippyCommand for Remove {
         let db = get_db(&args.db_path)?;
         let tx = db.rw_transaction()?;
 
-        {
-            if tx.length()? == 0 {
-                println!("Clipboard empty. There is nothing to remove.");
-                return Ok(());
-            }
+        if tx.length()? == 0 {
+            println!("Clipboard empty. There is nothing to remove.");
+            return Ok(());
         }
 
-        {
-            tx.remove(
-                tx.scan()
-                    .primary::<ClipEntry>()?
-                    .all()?
-                    .flatten()
-                    .nth(position - 1)
-                    .expect("No clip found at that index"),
-            )?;
-        }
+        tx.remove(
+            tx.scan()
+                .primary::<ClipEntry>()?
+                .all()?
+                .flatten()
+                .nth(position - 1)
+                .expect("No clip found at that index"),
+        )?;
+
         Ok(tx.commit()?)
     }
 }

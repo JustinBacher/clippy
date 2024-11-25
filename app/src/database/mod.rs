@@ -4,7 +4,7 @@ use std::{cmp::Ordering::*, collections::HashSet};
 
 use anyhow::Result;
 use camino::Utf8Path;
-use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 

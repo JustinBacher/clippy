@@ -64,7 +64,7 @@ pub fn write_to_config(
     };
 
     shell.file_name("clippy_completions");
-    generate(shell, cmd, APP_NAME, &mut File::create(&config_path)?);
+    generate(shell, cmd, APP_NAME, &mut File::create(config_path)?);
 
     Ok(config_path.to_string())
 }
