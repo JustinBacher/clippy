@@ -4,6 +4,9 @@ use std::{cmp::Ordering::*, collections::HashSet};
 
 use anyhow::Result;
 use camino::Utf8Path;
+use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
+use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 pub use crate::database::schema::{
     transaction::{query::PrimaryScanIterator, RTransaction, RwTransaction},
@@ -24,6 +27,13 @@ impl<'txn> TableLen<'txn, ClipEntry> for RwTransaction<'txn> {
     }
 }
 
+#[derive(EnumIter, Serialize, Deserialize, ValueEnum, Copy, Clone, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum LinuxShells {
+    Bash,
+    Fish,
+    Zsh,
+}
 pub fn get_db(path: &Utf8Path) -> Result<native_db::Database> {
     let db = Builder::new().create(&MODELS, path)?;
     let tx = db.rw_transaction()?;
