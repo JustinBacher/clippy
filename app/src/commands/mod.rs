@@ -51,14 +51,29 @@ impl fmt::Display for GreedyParseError {
 impl FromStr for GreedyInt {
     type Err = GreedyParseError;
 
+    // Greedily accepts integers from the start of a string
+    // until there are no numerical values
     fn from_str(s: &str) -> Result<GreedyInt, GreedyParseError> {
-        Ok(GreedyInt(
-            s.chars()
-                .take_while(|c| c.is_ascii_digit())
-                .collect::<String>()
-                .parse::<usize>()
-                .unwrap(),
-        ))
+        let mut result = 0usize;
+        let mut has_digits = false;
+
+        for c in s.chars() {
+            if let Some(digit) = c.to_digit(10) {
+                has_digits = true;
+                result = result
+                    .checked_mul(10)
+                    .and_then(|res| res.checked_add(digit as usize))
+                    .ok_or(GreedyParseError)?;
+            } else {
+                break;
+            }
+        }
+
+        if has_digits {
+            Ok(GreedyInt(result))
+        } else {
+            Err(GreedyParseError)
+        }
     }
 }
 
