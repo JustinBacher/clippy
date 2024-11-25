@@ -81,6 +81,8 @@ fn get_active_window_hyprland() -> Result<String> {
     Ok(title)
 }
 
+fn detect_wayland_compositor() -> Option<Compositor> {}
+
 fn detect_wayland_compositor() -> Option<Compositor> {
     static COMPOSITOR_RE: Lazy<Regex> =
         Lazy::new(|| RegexBuilder::new(COMPOSITOR_NAMES).case_insensitive(true).build().unwrap());
