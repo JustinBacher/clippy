@@ -36,8 +36,8 @@ completions before release.
 > [!NOTE]
 > Generating these are easy.
 > Before making a PR that will change:
-> - **man pages**: `cargo xtask mangen`
-> - **shell completions**: `cargo xtask completions`
+> - **man pages**: `cargo gen man`
+> - **shell completions**: `cargo gen completions`
 
 ###
 

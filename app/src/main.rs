@@ -1,18 +1,18 @@
+use anyhow::Result;
 use clap::Parser;
-pub use clippy::{cli, commands, error, prelude, utils};
+pub use clippy::{cli, commands};
 use clippy::{
     cli::{ClippyCli, Commands},
     commands::ClippyCommand,
-    prelude::Result,
 };
 
 fn main() -> Result<()> {
-    pretty_env_logger::init();
     let args = ClippyCli::parse();
 
     // I wanna know if there's a better way to do this than this huge blob
     //
     // But at least this way the commands are in there own files and it's
+    //
     // easier to destinguish tests
     match &args.command {
         Commands::GenCompletions(command) => command.execute(&args)?,

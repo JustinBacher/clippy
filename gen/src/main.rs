@@ -1,3 +1,4 @@
+extern crate anyhow;
 extern crate clap;
 extern crate clap_complete;
 extern crate clap_mangen;
@@ -6,10 +7,11 @@ extern crate itertools;
 
 use std::{env, fs::write, process::exit};
 
+use anyhow::Result;
 use clap::CommandFactory;
 use clap_complete::Shell::*;
 use clap_mangen::Man;
-use clippy::{cli::ClippyCli, commands::completions::write_to_config, prelude::Result};
+use clippy::{cli::ClippyCli, commands::completions::write_to_config};
 use itertools::Either::Right;
 
 fn main() -> Result<()> {
@@ -22,11 +24,11 @@ fn main() -> Result<()> {
 
 fn try_main() -> Result<()> {
     match env::args().nth(1).as_deref() {
-        Some("mangen") => man_gen()?,
+        Some("man") => man_gen()?,
         Some("completions") => {
             let out_dir = env!("CARGO_MANIFEST_DIR");
             for shell in [Bash, Zsh, Fish] {
-                write_to_config(shell, &mut ClippyCli::command(), Right(out_dir.to_string()))?;
+                write_to_config(shell, &mut ClippyCli::command(), Right(&out_dir))?;
             }
         },
         _ => panic!("Invalid argument passed"),

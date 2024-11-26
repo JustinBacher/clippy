@@ -2,8 +2,10 @@
 name = "xtask"
 version = "0.1.0"
 authors = ["Justin Bacher <92jbach@gmail.com>"]
+edition = "2021"
 
 [dependencies]
+anyhow = "1.0.93"
 clippy = { path = "../app" }
 clap = "4.5"
 clap_complete = "4.5"

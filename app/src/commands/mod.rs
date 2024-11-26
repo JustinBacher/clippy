@@ -9,6 +9,7 @@ pub mod wipe;
 
 use std::{ops::Sub, str::FromStr};
 
+use anyhow::Result;
 pub use completions::GenCompletions;
 use derive_more::Display;
 pub use list::List;
@@ -19,10 +20,7 @@ pub use store::Store;
 pub use version::Version;
 pub use wipe::Wipe;
 
-use crate::{
-    cli::ClippyCli,
-    prelude::{Error, Result},
-};
+use crate::cli::ClippyCli;
 
 pub trait ClippyCommand {
     fn execute(&self, _: &ClippyCli) -> Result<()> {
@@ -37,17 +35,45 @@ pub trait ClippyCommand {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]
 pub struct GreedyInt(usize);
 
-impl FromStr for GreedyInt {
-    type Err = Error;
+use std::{error::Error, fmt};
 
-    fn from_str(s: &str) -> Result<GreedyInt> {
-        Ok(GreedyInt(
-            s.chars()
-                .take_while(|c| c.is_ascii_digit())
-                .collect::<String>()
-                .parse::<usize>()
-                .unwrap(),
-        ))
+#[derive(Debug)]
+pub struct GreedyParseError;
+
+impl Error for GreedyParseError {}
+
+impl fmt::Display for GreedyParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oh no, something bad went down")
+    }
+}
+
+impl FromStr for GreedyInt {
+    type Err = GreedyParseError;
+
+    // Greedily accepts integers from the start of a string
+    // until there are no numerical values
+    fn from_str(s: &str) -> Result<GreedyInt, GreedyParseError> {
+        let mut result = 0usize;
+        let mut has_digits = false;
+
+        for c in s.chars() {
+            if let Some(digit) = c.to_digit(10) {
+                has_digits = true;
+                result = result
+                    .checked_mul(10)
+                    .and_then(|res| res.checked_add(digit as usize))
+                    .ok_or(GreedyParseError)?;
+            } else {
+                break;
+            }
+        }
+
+        if has_digits {
+            Ok(GreedyInt(result))
+        } else {
+            Err(GreedyParseError)
+        }
     }
 }
 

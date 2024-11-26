@@ -1,5 +1,6 @@
 [workspace]
 members = ["app", "xtask"]
+default-members = ["app/"]
 resolver = "2"
 
 [lints.clippy]

@@ -1,9 +1,11 @@
+use anyhow::Result;
 use clap::Parser;
-use derive_more::From;
-use redb::{Database, ReadableTable, ReadableTableMetadata};
 
 use super::{ClippyCommand, GreedyInt};
-use crate::{cli::ClippyCli, prelude::Result, utils::database::TABLE_DEF};
+use crate::{
+    cli::ClippyCli,
+    database::{get_db, ClipEntry, TableLen},
+};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Removes a clip from the database
@@ -15,27 +17,23 @@ pub struct Remove {
 impl ClippyCommand for Remove {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
         let position: usize = self.id.into();
-        let db = Database::open(&args.db_path)?;
-        let read_tx = db.begin_read()?;
-        let read_table = read_tx.open_table(TABLE_DEF)?;
+        let db = get_db(&args.db_path)?;
+        let tx = db.rw_transaction()?;
 
-        {
-            if read_table.len()? == 0 {
-                println!("Clipboard empty. There is nothing to remove.");
-                return Ok(());
-            }
+        if tx.length()? == 0 {
+            println!("Clipboard empty. There is nothing to remove.");
+            return Ok(());
         }
 
-        let write_tx = db.begin_write()?;
+        tx.remove(
+            tx.scan()
+                .primary::<ClipEntry>()?
+                .all()?
+                .flatten()
+                .nth(position - 1)
+                .expect("No clip found at that index"),
+        )?;
 
-        {
-            let mut cursor = read_table.iter()?;
-            let mut write_table = write_tx.open_table(TABLE_DEF)?;
-
-            write_table.remove(cursor.nth(position - 1).unwrap()?.0.value())?;
-        }
-        write_tx.commit()?;
-
-        Ok(())
+        Ok(tx.commit()?)
     }
 }
