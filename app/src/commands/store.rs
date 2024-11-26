@@ -8,11 +8,8 @@ use clap::{ArgAction, Parser, ValueEnum};
 use serde::Serialize;
 
 use super::ClippyCommand;
-use crate::{
-    cli::ClippyCli,
-    database::{ensure_db_size, get_db, remove_duplicates, ClipEntry, Database},
-    utils::formatting::trim,
-};
+use crate::{cli::ClippyCli, utils::formatting::trim};
+use clippy_daemon::database::{ensure_db_size, get_db, remove_duplicates, ClipEntry, Database};
 
 const FIVE_MEGABYTES: usize = 5e6 as usize;
 
@@ -64,26 +61,4 @@ pub fn store(db: &Database, payload: &[u8]) -> Result<()> {
     }
     tx.commit()?;
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-
-    use crate::database::{
-        test::{fill_db_and_test, get_db_contents, FillWith},
-        TableLen,
-    };
-
-    #[test]
-    fn it_stores() {
-        fill_db_and_test(FillWith::Random, 20, |db, before| {
-            let count = db.r_transaction()?.length()?;
-
-            assert_eq!(count, 20);
-            assert_eq!(get_db_contents(db)?, before);
-
-            Ok(())
-        })
-        .unwrap();
-    }
 }

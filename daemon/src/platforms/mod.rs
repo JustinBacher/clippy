@@ -1,4 +1,5 @@
-use futures_core::stream::Stream;
+use anyhow::{anyhow, Result};
+use genawaiter::Generator;
 
 use crate::database::ClipEntry;
 
@@ -26,10 +27,10 @@ pub fn get_active_window() -> Option<String> {
     }
 }
 
-pub fn listen_for_clips() -> Result<Stream<Item = ClipEntry>> {
+pub async fn listen_for_clips() -> Result<Box<dyn Generator<Yield = ClipEntry, Return = ()>>> {
     #[cfg(target_os = "linux")]
     {
-        linux::listen_for_clips()
+        return linux::listen_for_clips().await;
     }
 
     #[cfg(target_os = "windows")]

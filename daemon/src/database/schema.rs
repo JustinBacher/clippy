@@ -27,9 +27,9 @@ pub mod schemas {
     use native_model::{native_model, Model};
 
     use super::*;
-    use crate::utils::detection::get_active_window;
+    use crate::platforms::get_active_window;
 
-    pub type ClipEntry = v1::ClipEntry;
+    pub type ClipEntry = v1::ClipEntryV1;
 
     pub(super) mod v1 {
         use super::*;
@@ -68,7 +68,7 @@ pub mod schemas {
         #[native_db]
         #[native_model(id = 1, version = 1, with = Bincode)]
         #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Hash, Clone)]
-        pub struct ClipEntry {
+        pub struct ClipEntryV1 {
             #[primary_key]
             pub epoch: DateTime,
             pub payload: Vec<u8>,
@@ -115,6 +115,6 @@ pub mod schemas {
 
 pub static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
-    models.define::<schemas::v1::ClipEntry>().unwrap();
+    models.define::<schemas::v1::ClipEntryV1>().unwrap();
     models
 });
