@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 pub use crate::database::schema::{
-    transaction::{query::PrimaryScanIterator, RTransaction, RwTransaction},
+    transaction::{RTransaction, RwTransaction},
     Builder, ClipEntry, Database, ToInput, MODELS,
 };
 pub trait TableLen<'txn, T: ToInput> {
@@ -34,7 +34,7 @@ pub enum LinuxShells {
     Fish,
     Zsh,
 }
-pub fn get_db(path: &Utf8Path) -> Result<native_db::Database> {
+pub fn get_db(path: &str) -> Result<native_db::Database> {
     let db = Builder::new().create(&MODELS, path)?;
     let tx = db.rw_transaction()?;
     tx.migrate::<ClipEntry>()?;
@@ -111,7 +111,6 @@ pub mod test {
 
     use super::*;
     use crate::{
-        commands::store::store,
         database::schema::{ClipEntry, Database},
         utils::random_str,
     };
@@ -123,10 +122,16 @@ pub mod test {
     }
 
     pub fn get_db_contents(db: &Database) -> Result<Vec<Vec<u8>>> {
-        let tx = db.r_transaction()?;
-        let it = tx.scan().primary()?;
-        let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-        Ok(cursor.flatten().map(|entry| entry.payload).collect_vec())
+        let contents = db
+            .r_transaction()?
+            .scan()
+            .primary::<ClipEntry>()?
+            .all()?
+            .flatten()
+            .map(|entry| entry.payload)
+            .collect_vec();
+
+        Ok(contents)
     }
 
     pub fn fill_db_and_test<F>(fill: FillWith, amount: i64, func: F) -> Result<()>
@@ -149,7 +154,12 @@ pub mod test {
                 },
             };
 
-            store(&db, dummy.as_bytes())?;
+            let tx = db.rw_transaction()?;
+            {
+                tx.insert(ClipEntry::new(payload))?;
+            }
+            tx.commit()?;
+
             all_items.push(dummy.as_bytes().to_vec());
         }
 
@@ -188,8 +198,8 @@ pub mod test {
         fill_db_and_test(FillWith::DupesRandomEnds(dupe), 20, |db, before| {
             remove_duplicates(db, 0)?;
             let tx = db.r_transaction()?;
-            let it = tx.scan().primary()?;
-            let mut cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
+            let it = tx.scan().primary::<ClipEntry>()?;
+            let mut cursor = it.all()?;
 
             let a_first = cursor.next().unwrap()?.payload;
             let a_second = cursor.next().unwrap()?.payload;

@@ -4,7 +4,6 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-use strum::EnumString;
 use x11rb::connection::Connection as X11Connection;
 use x11rb::protocol::xproto::{
     get_property as get_property_x11, AtomEnum as X11AtomEnum, ConnectionExt, Window as X11Window,
@@ -12,12 +11,6 @@ use x11rb::protocol::xproto::{
 use zbus::blocking::{Connection as ZbusConnection, Proxy as ZbusProxy};
 
 use super::{Compositor, IntoEnumIterator, WindowManager};
-
-#[derive(Debug, PartialEq)]
-enum WindowManager {
-    X11,
-    Wayland,
-}
 
 fn get_active_window_sway() -> Result<String> {
     let output = Command::new("swaymsg").arg("-t").arg("get_tree").output()?;
@@ -119,6 +112,7 @@ pub fn detect_wayland_compositor() -> Option<Compositor> {
             .case_insensitive(true)
             .build()
             .unwrap()
+    });
 
     let desktop_session = env::var("XDG_CURRENT_DESKTOP")
         .iter()
