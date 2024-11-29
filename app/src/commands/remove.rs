@@ -1,11 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
+use clippy_daemon::database::{get_db, ClipEntry, TableLen};
 
 use super::{ClippyCommand, GreedyInt};
-use crate::{
-    cli::ClippyCli,
-    database::{get_db, ClipEntry, TableLen},
-};
+use crate::cli::ClippyCli;
 
 #[derive(Parser, Debug, PartialEq)]
 /// Removes a clip from the database
