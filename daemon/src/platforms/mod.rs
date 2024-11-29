@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use genawaiter::Generator;
 
 use crate::database::ClipEntry;
@@ -30,7 +30,7 @@ pub fn get_active_window() -> Option<String> {
 pub async fn listen_for_clips() -> Result<Box<dyn Generator<Yield = ClipEntry, Return = ()>>> {
     #[cfg(target_os = "linux")]
     {
-        return linux::listen_for_clips().await;
+        linux::listen_for_clips().await
     }
 
     #[cfg(target_os = "windows")]

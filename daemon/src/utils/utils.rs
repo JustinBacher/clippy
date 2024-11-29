@@ -19,10 +19,8 @@ pub fn get_cache_path(path: &str, name: &str) -> Option<String> {
     get_path(cache_dir(), path, name)
 }
 
-#[cfg(test)]
 use rand::{distributions::Alphanumeric, Rng};
 
-#[cfg(test)]
 pub fn random_str(length: usize) -> String {
     rand::thread_rng()
         .sample_iter(&Alphanumeric)

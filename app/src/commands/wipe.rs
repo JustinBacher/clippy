@@ -1,8 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
+use clippy_daemon::database::get_db;
 
 use super::ClippyCommand;
-use crate::{cli::ClippyCli, database::get_db};
+use crate::cli::ClippyCli;
 
 #[derive(Parser, Debug, PartialEq)]
 /// Wipes all clips from clipboard

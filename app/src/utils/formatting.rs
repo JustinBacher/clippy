@@ -1,9 +1,8 @@
 use std::{io::Cursor, mem::size_of_val};
 
+use clippy_daemon::database::ClipEntry;
 use image::ImageReader;
 use size::Size;
-
-use clippy_daemon::database::ClipEntry;
 
 pub fn trim(s: &[u8]) -> Vec<u8> {
     // Original from https://stackoverflow.com/a/67358195 just changed to be used on vectors

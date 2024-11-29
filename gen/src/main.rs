@@ -3,9 +3,10 @@ extern crate clap;
 extern crate clap_complete;
 extern crate clap_mangen;
 extern crate clippy;
+extern crate clippy_daemon;
 extern crate itertools;
 
-use std::{env, fs::write, process::exit};
+use std::{collections::HashMap, env, fs::write, process::exit};
 
 use anyhow::Result;
 use clap::CommandFactory;
@@ -15,7 +16,10 @@ use clippy::{
     cli::ClippyCli,
     commands::completions::{write_to_config, LinuxShellsIter},
 };
+use clippy_daemon::utils::config::*;
 use itertools::Either::Right;
+use serde::Serialize;
+use toml;
 
 fn main() -> Result<()> {
     if let Err(e) = try_main() {
@@ -33,6 +37,15 @@ fn try_main() -> Result<()> {
             for shell in LinuxShellsIter {
                 write_to_config(shell, &mut ClippyCli::command(), Right(&out_dir))?;
             }
+        },
+        Some("config") => {
+            let config = Config {
+                general: Some(General::default()),
+                polling_rate: Some(100),
+                timeout_rate: Some(300),
+                clipboard: Some(HashMap::from([("general", General::default())])),
+            };
+            println!(toml::to_string(config));
         },
         _ => panic!("Invalid argument passed"),
     }

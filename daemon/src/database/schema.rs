@@ -29,7 +29,7 @@ pub mod schemas {
     use super::*;
     use crate::platforms::get_active_window;
 
-    pub type ClipEntry = v1::ClipEntryV1;
+    pub type ClipEntry = crate::database::schema::schemas::v1::ClipEntryV1;
 
     pub(super) mod v1 {
         use super::*;
@@ -75,7 +75,7 @@ pub mod schemas {
             pub application: Option<String>,
         }
 
-        impl ClipEntry {
+        impl ClipEntryV1 {
             pub fn new(payload: &[u8]) -> Self {
                 Self {
                     epoch: v1::DateTime::now(),
@@ -115,6 +115,6 @@ pub mod schemas {
 
 pub static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
-    models.define::<schemas::v1::ClipEntryV1>().unwrap();
+    models.define::<crate::database::ClipEntry>().unwrap();
     models
 });

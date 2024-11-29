@@ -1,15 +1,10 @@
-use std::io::{stdout, Write};
-
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
+use clippy_daemon::database::{get_db, ClipEntry, TableLen};
 use serde::Serialize;
 
 use super::ClippyCommand;
-use crate::{
-    cli::ClippyCli,
-    database::{get_db, ClipEntry, TableLen},
-    utils::formatting::format_entry,
-};
+use crate::{cli::ClippyCli, utils::formatting::format_entry};
 
 #[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -37,7 +32,6 @@ pub struct List {
 
 impl ClippyCommand for List {
     fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let mut out = stdout();
         let db = get_db(&args.db_path)?;
         let tx = db.r_transaction()?;
 
@@ -52,7 +46,7 @@ impl ClippyCommand for List {
             .enumerate()
             .for_each(|(i, entry)| {
                 let preview = format_entry(&entry, self.preview_width, self.include_dates);
-                writeln!(out, "{i} {}", preview,).unwrap();
+                println!("{i} {}", preview);
             });
 
         Ok(())
@@ -61,10 +55,9 @@ impl ClippyCommand for List {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        cli::mock_cli,
-        database::test::{fill_db_and_test, get_db_contents, FillWith},
-    };
+    use clippy_daemon::database::testing::{fill_db_and_test, get_db_contents, FillWith};
+
+    use crate::cli::mock_cli;
 
     #[test]
     fn it_lists() {

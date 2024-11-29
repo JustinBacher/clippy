@@ -1,33 +1,35 @@
-mod database;
-mod utils;
-
-use std::{path::Path, sync::{mpsc, Arc, Mutex}};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::Result;
-use log::info;
-use notify::{event::ModifyKind, Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use tokio_stream::Stream;
-
-use clippy_daemon::platforms;
-use crate::{
-    database::{get_db, remove_duplicates, ClipEntry},
-    platforms::listen_for_clips
+use camino::Utf8Path;
+use clippy_daemon::{
+    database::{ensure_db_size, get_db, remove_duplicates},
+    platforms::listen_for_clips,
+    utils::{
+        async_helpers::GeneratorStream,
+        config::{watch_config, Config},
+        get_cache_path, get_config_path,
+    },
 };
-use utils::{config::{Config, watch_config}, async_helpers::GeneratorStream, get_cache_path, get_config_path};
+use futures::StreamExt;
+use tokio::task;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let config_path = get_config_path("clippy", "config.toml").unwrap();
     let config = Arc::new(Mutex::new(
-        Config::from_file(Path::new(&config_path)).await,
+        Config::from_file(Path::new(&config_path)).await?,
     ));
     let watcher_task = {
         let config_path = config_path.clone();
         let config = Arc::clone(&config);
-        tokio::spawn(config.watch(config_path))
+        task::spawn(watch_config(config_path, config))
     };
 
-    respond_to_clips().await;
+    respond_to_clips().await?;
 
     let _ = watcher_task.await;
 
@@ -35,7 +37,8 @@ async fn main() -> Result<()> {
 }
 
 async fn respond_to_clips() -> Result<()> {
-    let db = get_db(&get_cache_path("clippy", "db").unwrap())?;
+    let path = get_cache_path("clippy", "db").unwrap();
+    let db = get_db(Utf8Path::new(path.as_str()))?;
     let generator = listen_for_clips().await?;
     let mut stream = GeneratorStream::new(generator);
 
@@ -46,7 +49,7 @@ async fn respond_to_clips() -> Result<()> {
 
             // TODO: get these numbers from config
             remove_duplicates(&db, 10)?;
-            ensure_db_size(&db, 100)
+            ensure_db_size(&db, 100)?;
         }
         tx.commit()?;
     }
