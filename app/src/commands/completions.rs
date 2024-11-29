@@ -44,12 +44,14 @@ impl ClippyCommand for GenCompletions {
             Either::Left(self),
         )?;
 
-        Ok(println!(
+        println!(
             "Wrote completions to \n\n\t{path:?}\n\n\
             \
             If you did not specify an output location please move this file into your \
             completions folder or it's contents to your completions file",
-        ))
+        );
+
+        Ok(())
     }
 }
 

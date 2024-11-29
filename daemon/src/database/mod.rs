@@ -73,16 +73,11 @@ pub fn ensure_db_size(db: &Database, limit: u64) -> Result<()> {
 #[cfg(test)]
 pub mod test {
 
-    use itertools::Itertools;
     use pretty_assertions::assert_eq;
-    use shortcut_assert_fs::TmpFs;
-    use testing::{fill_db_and_test, get_db_contents, FillWith};
+    use testing::{fill_db_and_test, FillWith};
 
     use super::*;
-    use crate::{
-        database::schema::{ClipEntry, Database},
-        utils::random_str,
-    };
+    use crate::database::schema::ClipEntry;
 
     #[test]
     fn it_removes_dupes_oldest() {
