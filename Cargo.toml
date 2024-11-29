@@ -2,3 +2,6 @@
 members = ["app", "gen", "daemon"]
 default-members = ["app/", "daemon/"]
 resolver = "2"
+
+[lints.clippy]
+semicolon_if_nothing_returned = "allow"
