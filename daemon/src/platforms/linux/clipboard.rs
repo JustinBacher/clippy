@@ -1,6 +1,7 @@
+use std::io::Read;
+
 use anyhow::Result;
 use genawaiter::{sync::gen, yield_, Generator};
-use std::io::Read;
 use tokio::{
     time,
     time::{Duration, Interval},
@@ -55,7 +56,7 @@ async fn listen_for_clips_wayland() -> impl Generator<Yield = ClipEntry, Return 
             WaylandMimeType::Any,
         ) {
             let mut new_content = Vec::<u8>::new();
-            if let Ok(_) = pipe.read(&mut new_content) {
+            if let Ok(_) = pipe.read_exact(&mut new_content) {
                 if new_content != previous_content {
                     yield_!(ClipEntry::new(previous_content.as_slice()));
                     previous_content = new_content;

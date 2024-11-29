@@ -7,7 +7,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.93"
 clippy = { path = "../app" }
+clippy_daemon = { path = "../daemon" }
 clap = "4.5"
 clap_complete = "4.5"
 clap_mangen = "0.2"
 itertools = "0.13"
+serde = { version = "1.0.215", features = ["derive"] }
+toml = "0.8.19"

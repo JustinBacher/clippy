@@ -1,12 +1,10 @@
 mod schema;
+pub mod testing;
 
 use std::{cmp::Ordering::*, collections::HashSet};
 
 use anyhow::Result;
 use camino::Utf8Path;
-use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 
 pub use crate::database::schema::{
     transaction::{RTransaction, RwTransaction},
@@ -27,14 +25,7 @@ impl<'txn> TableLen<'txn, ClipEntry> for RwTransaction<'txn> {
     }
 }
 
-#[derive(EnumIter, Serialize, Deserialize, ValueEnum, Copy, Clone, PartialEq, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum LinuxShells {
-    Bash,
-    Fish,
-    Zsh,
-}
-pub fn get_db(path: &str) -> Result<native_db::Database> {
+pub fn get_db(path: &Utf8Path) -> Result<native_db::Database> {
     let db = Builder::new().create(&MODELS, path)?;
     let tx = db.rw_transaction()?;
     tx.migrate::<ClipEntry>()?;
@@ -46,46 +37,23 @@ pub fn get_db(path: &str) -> Result<native_db::Database> {
 pub fn remove_duplicates(db: &Database, duplicates: i64) -> Result<()> {
     let rtx = db.r_transaction()?;
     let wtx = db.rw_transaction()?;
+    let it = rtx.scan().primary::<ClipEntry>()?;
+    let cursor = it.all()?;
     let mut seen = HashSet::<Vec<u8>>::new();
 
-    match duplicates.cmp(&0) {
-        Greater => {
-            rtx.scan()
-                .primary::<ClipEntry>()?
-                .all()?
-                .take(duplicates as usize)
-                .flatten()
-                .filter(|entry| !seen.insert(entry.payload.to_vec()))
-                .for_each(|entry| {
-                    wtx.remove(entry).ok();
-                });
-        },
-        Less => {
-            rtx.scan()
-                .primary::<ClipEntry>()?
-                .all()?
-                .rev()
-                .take(duplicates.unsigned_abs() as usize)
-                .flatten()
-                .filter(|entry| !seen.insert(entry.payload.to_vec()))
-                .for_each(|entry| {
-                    wtx.remove(entry).ok();
-                });
-        },
-        Equal => {
-            rtx.scan()
-                .primary::<ClipEntry>()?
-                .all()?
-                .rev()
-                .flatten()
-                .filter(|entry| !seen.insert(entry.payload.to_vec()))
-                .for_each(|entry| {
-                    wtx.remove(entry).ok();
-                });
-        },
+    let filtered: Box<dyn Iterator<Item = ClipEntry>> = match duplicates.cmp(&0) {
+        Greater => Box::new(cursor.take(duplicates as usize).flatten()),
+        Less => Box::new(cursor.rev().take(duplicates.unsigned_abs() as usize).flatten()),
+        Equal => Box::new(cursor.rev().flatten()),
+    };
+
+    for entry in filtered {
+        if !seen.insert(entry.payload.to_vec()) {
+            wtx.remove(entry).ok();
+        }
     }
-    wtx.commit()?;
-    Ok(())
+
+    Ok(wtx.commit()?)
 }
 
 pub fn ensure_db_size(db: &Database, limit: u64) -> Result<()> {
@@ -108,63 +76,13 @@ pub mod test {
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
     use shortcut_assert_fs::TmpFs;
+    use testing::{fill_db_and_test, get_db_contents, FillWith};
 
     use super::*;
     use crate::{
         database::schema::{ClipEntry, Database},
         utils::random_str,
     };
-
-    pub enum FillWith<'a> {
-        Dupes(&'a str),
-        Random,
-        DupesRandomEnds(&'a str),
-    }
-
-    pub fn get_db_contents(db: &Database) -> Result<Vec<Vec<u8>>> {
-        let contents = db
-            .r_transaction()?
-            .scan()
-            .primary::<ClipEntry>()?
-            .all()?
-            .flatten()
-            .map(|entry| entry.payload)
-            .collect_vec();
-
-        Ok(contents)
-    }
-
-    pub fn fill_db_and_test<F>(fill: FillWith, amount: i64, func: F) -> Result<()>
-    where
-        F: FnOnce(&Database, Vec<Vec<u8>>) -> Result<()>,
-    {
-        let tf = TmpFs::new()?;
-        let path = tf.path("test");
-        let db = get_db(Utf8Path::new(path.as_str()))?;
-        let mut all_items = Vec::<Vec<u8>>::new();
-
-        for i in 0..20 {
-            let dummy = match fill {
-                FillWith::Dupes(dupe) => dupe,
-                FillWith::Random => &random_str(7),
-                FillWith::DupesRandomEnds(dupe) => match i {
-                    1 => &random_str(7),
-                    i if ![1, amount - 2].contains(&i) => dupe,
-                    _ => &random_str(7),
-                },
-            };
-
-            let tx = db.rw_transaction()?;
-            {
-                tx.insert(ClipEntry::new(payload))?;
-            }
-            tx.commit()?;
-
-            all_items.push(dummy.as_bytes().to_vec());
-        }
-
-        func(&db, all_items)
-    }
 
     #[test]
     fn it_removes_dupes_oldest() {

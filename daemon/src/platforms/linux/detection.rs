@@ -4,9 +4,12 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::{Regex, RegexBuilder};
-use x11rb::connection::Connection as X11Connection;
-use x11rb::protocol::xproto::{
-    get_property as get_property_x11, AtomEnum as X11AtomEnum, ConnectionExt, Window as X11Window,
+use x11rb::{
+    connection::Connection as X11Connection,
+    protocol::xproto::{
+        get_property as get_property_x11, AtomEnum as X11AtomEnum, ConnectionExt,
+        Window as X11Window,
+    },
 };
 use zbus::blocking::{Connection as ZbusConnection, Proxy as ZbusProxy};
 
@@ -125,10 +128,10 @@ pub fn detect_wayland_compositor() -> Option<Compositor> {
 }
 
 pub fn detect_window_manager() -> Result<WindowManager> {
-    if let Some(_) = std::env::var_os("WAYLAND_DISPLAY") {
-        return Ok(WindowManager::Wayland);
-    } else if let Some(_) = std::env::var_os("DISPLAY") {
-        return Ok(WindowManager::X11);
+    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+        Ok(WindowManager::Wayland)
+    } else if std::env::var_os("DISPLAY").is_some() {
+        Ok(WindowManager::X11)
     } else {
         Err(anyhow!("Unable to determine "))
     }

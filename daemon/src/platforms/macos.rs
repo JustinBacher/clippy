@@ -1,6 +1,7 @@
-use cocoa::appkit::{NSPasteboard, NSPasteboardTypeString};
-use cocoa::foundation::{NSData, NSString};
-
+use cocoa::{
+    appkit::{NSPasteboard, NSPasteboardTypeString},
+    foundation::{NSData, NSString},
+};
 use objc::rc::autoreleasepool;
 
 fn set_clipboard_text(text: &str) {

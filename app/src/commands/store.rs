@@ -5,11 +5,11 @@ use std::{
 
 use anyhow::Result;
 use clap::{ArgAction, Parser, ValueEnum};
+use clippy_daemon::database::{ensure_db_size, get_db, remove_duplicates, ClipEntry, Database};
 use serde::Serialize;
 
 use super::ClippyCommand;
 use crate::{cli::ClippyCli, utils::formatting::trim};
-use clippy_daemon::database::{ensure_db_size, get_db, remove_duplicates, ClipEntry, Database};
 
 const FIVE_MEGABYTES: usize = 5e6 as usize;
 

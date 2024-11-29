@@ -5,9 +5,10 @@ pub mod remove;
 pub mod search;
 pub mod store;
 pub mod version;
+pub mod watch;
 pub mod wipe;
 
-use std::{ops::Sub, str::FromStr};
+use std::{ops::Sub, path::Path, str::FromStr};
 
 use anyhow::Result;
 pub use completions::GenCompletions;
@@ -18,9 +19,10 @@ pub use remove::Remove;
 pub use search::Search;
 pub use store::Store;
 pub use version::Version;
+pub use watch::Watch;
 pub use wipe::Wipe;
 
-use crate::cli::ClippyCli;
+use crate::{cli::ClippyCli, utils::get_config_path};
 
 pub trait ClippyCommand {
     fn execute(&self, _: &ClippyCli) -> Result<()> {
@@ -30,6 +32,15 @@ pub trait ClippyCommand {
             https://github.com/JustinBacher/clippy/issues"
         )
     }
+}
+
+pub fn is_fresh_run() -> Result<bool> {
+    let config_path = get_config_path("clippy", "config.toml").unwrap();
+    if Path::new(&config_path).exists() {
+        return Ok(true);
+    }
+
+    Ok(false)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display)]

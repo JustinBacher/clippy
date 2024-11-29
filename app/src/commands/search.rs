@@ -2,13 +2,10 @@ use std::io::{stdout, Write};
 
 use anyhow::Result;
 use clap::Parser;
+use clippy_daemon::database::{get_db, ClipEntry, TableLen};
 
 use super::ClippyCommand;
-use crate::{
-    cli::ClippyCli,
-    database::{get_db, ClipEntry, TableLen},
-    utils::formatting::format_entry,
-};
+use crate::{cli::ClippyCli, utils::formatting::format_entry};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Searches for a clip that contains `query`

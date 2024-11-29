@@ -1,11 +1,9 @@
 use anyhow::Result;
 use clap::Parser;
+use clippy_daemon::database::{get_db, ClipEntry, TableLen};
 
 use super::{ClippyCommand, GreedyInt};
-use crate::{
-    cli::ClippyCli,
-    database::{get_db, ClipEntry, PrimaryScanIterator, TableLen},
-};
+use crate::cli::ClippyCli;
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(allow_missing_positional(true))]
@@ -32,10 +30,14 @@ impl ClippyCommand for Recall {
             return Ok(());
         }
 
-        let it = tx.scan().primary()?;
-        let cursor: PrimaryScanIterator<ClipEntry> = it.all()?;
-
-        let clip = cursor.flatten().nth(&self.id - 1).expect(error_text).text()?;
+        let clip = tx
+            .scan()
+            .primary::<ClipEntry>()?
+            .all()?
+            .flatten()
+            .nth(&self.id - 1)
+            .expect(error_text)
+            .text()?;
         println!("{clip}");
 
         Ok(())
