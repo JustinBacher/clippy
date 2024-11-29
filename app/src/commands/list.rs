@@ -36,7 +36,8 @@ impl ClippyCommand for List {
         let tx = db.r_transaction()?;
 
         if tx.length()? == 0 {
-            return Ok(println!("Clipboard is empty"));
+            println!("Clipboard is empty");
+            return Ok(());
         }
 
         tx.scan()
