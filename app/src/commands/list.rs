@@ -1,29 +1,33 @@
+use std::path::Path;
+
 use anyhow::Result;
-use clap::{Parser, ValueEnum};
-use clippy_daemon::database::{get_db, ClipEntry, TableLen};
-use serde::Serialize;
+use camino::Utf8Path;
+use clap::Parser;
+use clippy_daemon::{
+    database::{ClipEntry, TableLen, get_db},
+    utils::config::Config,
+};
+use futures::executor;
 
 use super::ClippyCommand;
-use crate::{cli::ClippyCli, utils::formatting::format_entry};
-
-#[derive(ValueEnum, Parser, Clone, Default, PartialEq, Debug, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ClipboardState {
-    #[default]
-    Nil,
-    Data,
-    Clear,
-    Sensitive,
-}
+use crate::{
+    cli::ClippyCli,
+    utils::{formatting::format_entry, get_config_path},
+};
 
 #[derive(Parser, Debug, PartialEq)]
 /// Lists all stored clips in clipboard
 pub struct List {
+    /// What clipboard to list clips from
+    #[arg(short, long, default_value = "primary")]
+    clipboard: Option<String>,
+
     /// Includes dates clips were taken in the output
     #[arg(short('d'), long, action, default_value = "false")]
     include_dates: bool,
 
-    /// Max characters to show of clips in preview. Use 0 to retain original width.
+    /// Max characters to show of clips in preview. Use 0 to retain original
+    /// width.
     ///
     /// This does not affect what is put back into the clipboard
     #[arg(short('w'), long, default_value = "100")]
@@ -31,8 +35,18 @@ pub struct List {
 }
 
 impl ClippyCommand for List {
-    fn execute(&self, args: &ClippyCli) -> Result<()> {
-        let db = get_db(&args.db_path)?;
+    fn execute(&self, _: &ClippyCli) -> Result<()> {
+        let config =
+            executor::block_on(Config::from_file(Path::new(&get_config_path("clippy", "config.toml").unwrap())))?;
+        let mut clipboard = self.clipboard.clone().unwrap();
+        if clipboard == "primary" {
+            clipboard = "default".to_string();
+        }
+        let Some(board) = config.clipboard.get(&clipboard) else {
+            print!("No clipboards with the name: {}", self.clipboard.as_ref().unwrap());
+            return Ok(());
+        };
+        let db = get_db(Utf8Path::new(&board.db_path))?;
         let tx = db.r_transaction()?;
 
         if tx.length()? == 0 {
@@ -56,7 +70,7 @@ impl ClippyCommand for List {
 
 #[cfg(test)]
 mod test {
-    use clippy_daemon::database::testing::{fill_db_and_test, get_db_contents, FillWith};
+    use clippy_daemon::database::testing::{FillWith, fill_db_and_test, get_db_contents};
 
     use crate::cli::mock_cli;
 

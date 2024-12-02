@@ -5,7 +5,7 @@ use crate::{commands, utils::get_cache_path};
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum Commands {
-    Store(commands::Store),
+    Store(commands::Copy),
     GenCompletions(commands::GenCompletions),
     List(commands::List),
     Recall(commands::Recall),
@@ -19,7 +19,8 @@ pub const APP_NAME: &str = "clippy";
 
 #[derive(Parser)]
 #[command(name = APP_NAME, version)]
-/// Clippy is a lightweight clipboard history manager for Wayland built using Rust
+/// Clippy is a lightweight clipboard history manager for Wayland built using
+/// Rust
 pub struct ClippyCli {
     #[command(subcommand)]
     pub command: Commands,
@@ -32,7 +33,8 @@ pub struct ClippyCli {
     /// Path to the local database used to store previous clips
     pub db_path: Utf8PathBuf,
 
-    /// Number of most recent duplicates to keep. Negative values remove x oldest duplicates instead.
+    /// Number of most recent duplicates to keep. Negative values remove x
+    /// oldest duplicates instead.
     ///
     /// Positive values keep x amount of most recent duplicates.
     /// Negative values remove x amount of duplicates from the end.

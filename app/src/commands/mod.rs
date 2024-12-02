@@ -1,9 +1,9 @@
 pub mod completions;
+pub mod copy;
 pub mod list;
 pub mod recall;
 pub mod remove;
 pub mod search;
-pub mod store;
 pub mod version;
 pub mod watch;
 pub mod wipe;
@@ -12,12 +12,12 @@ use std::{ops::Sub, path::Path, str::FromStr};
 
 use anyhow::Result;
 pub use completions::GenCompletions;
+pub use copy::Copy;
 use derive_more::Display;
 pub use list::List;
 pub use recall::Recall;
 pub use remove::Remove;
 pub use search::Search;
-pub use store::Store;
 pub use version::Version;
 pub use watch::Watch;
 pub use wipe::Wipe;
@@ -54,9 +54,7 @@ pub struct GreedyParseError;
 impl Error for GreedyParseError {}
 
 impl fmt::Display for GreedyParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Oh no, something bad went down")
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Oh no, something bad went down") }
 }
 
 impl FromStr for GreedyInt {
@@ -80,24 +78,16 @@ impl FromStr for GreedyInt {
             }
         }
 
-        if has_digits {
-            Ok(GreedyInt(result))
-        } else {
-            Err(GreedyParseError)
-        }
+        if has_digits { Ok(GreedyInt(result)) } else { Err(GreedyParseError) }
     }
 }
 
 impl From<GreedyInt> for usize {
-    fn from(data: GreedyInt) -> Self {
-        data.0
-    }
+    fn from(data: GreedyInt) -> Self { data.0 }
 }
 
 impl Sub<usize> for &GreedyInt {
     type Output = usize;
 
-    fn sub(self, other: usize) -> usize {
-        self.0 - other
-    }
+    fn sub(self, other: usize) -> usize { self.0 - other }
 }

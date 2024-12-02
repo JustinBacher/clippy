@@ -14,7 +14,7 @@ use clap_complete::Shell::*;
 use clap_mangen::Man;
 use clippy::{
     cli::ClippyCli,
-    commands::completions::{write_to_config, LinuxShellsIter},
+    commands::completions::{write_to_config, LinuxShells},
 };
 use clippy_daemon::utils::config::*;
 use itertools::Either::Right;
@@ -34,18 +34,16 @@ fn try_main() -> Result<()> {
         Some("man") => man_gen()?,
         Some("completions") => {
             let out_dir = env!("CARGO_MANIFEST_DIR");
-            for shell in LinuxShellsIter {
+            for shell in [Bash, Fish, Zsh] {
                 write_to_config(shell, &mut ClippyCli::command(), Right(&out_dir))?;
             }
         },
         Some("config") => {
             let config = Config {
                 general: Some(General::default()),
-                polling_rate: Some(100),
-                timeout_rate: Some(300),
-                clipboard: Some(HashMap::from([("general", General::default())])),
+                clipboard: HashMap::from([("general".to_string(), Clipboard::default())]),
             };
-            println!(toml::to_string(config));
+            println!("{}", toml::to_string(&config)?);
         },
         _ => panic!("Invalid argument passed"),
     }

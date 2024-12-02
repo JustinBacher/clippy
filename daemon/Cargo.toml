@@ -9,6 +9,10 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.93"
+arboard = { version = "3.4.1", features = [
+    "wayland-data-control",
+    "wl-clipboard-rs",
+] }
 async-gen = "0.2.3"
 bincode = { version = "2.0.0-rc.3", features = ["serde"] }
 bincode_derive = "2.0.0-rc.3"
@@ -19,7 +23,6 @@ derive_more = { version = "1.0.0", features = ["display"] }
 dirs = "5"
 futures = "0.3.31"
 futures-core = "0.3.31"
-futures-util = "0.3.31"
 genawaiter = { version = "0.99.1", features = ["futures03"] }
 image = "0.25"
 itertools = "0.13"
@@ -39,20 +42,7 @@ tokio-stream = { version = "0.1.16", features = ["full"] }
 tokio-test = "0.4.4"
 toml = "0.8.19"
 tracing = "0.1"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows = "0.58.0"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.26.0"
-objc = "0.2"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-wl-clipboard-rs = "0.9.1"
-x11 = "2.21.0"
-x11-clipboard = "0.9.3"
-x11rb = "0.13.1"
-zbus = "5.1.1"
+x-win = { version = "2.0.2", features = ["x11"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

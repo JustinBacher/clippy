@@ -1,8 +1,8 @@
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use anyhow::Result;
 use clap::Parser;
-use clippy_daemon::database::{get_db, ClipEntry, TableLen};
+use clippy_daemon::database::{ClipEntry, TableLen, get_db};
 
 use super::ClippyCommand;
 use crate::{cli::ClippyCli, utils::formatting::format_entry};
@@ -23,7 +23,8 @@ pub struct Search {
     include_dates: bool,
 
     #[arg(short('w'), long, default_value = "100")]
-    /// Max characters to show of clips in preview. Use 0 to retain original width.
+    /// Max characters to show of clips in preview. Use 0 to retain original
+    /// width.
     ///
     ///
     /// This does not affect what is put back into the clipboard
@@ -46,9 +47,7 @@ impl ClippyCommand for Search {
             .all()?
             .flatten()
             .enumerate()
-            .filter(|(_, entry)| {
-                entry.contains(&self.query) & entry.was_copied_from_app(&self.application)
-            })
+            .filter(|(_, entry)| entry.contains(&self.query) & entry.was_copied_from_app(&self.application))
             .for_each(|(i, entry)| {
                 let preview = format_entry(&entry, self.preview_width, self.include_dates);
                 writeln!(out, "{i} {}", preview,).unwrap();

@@ -1,15 +1,15 @@
 use std::fs::File;
 
 use anyhow::Result;
-use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
-use clap_complete::aot::{generate, Generator, Shell};
+use clap::{Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath, value_parser};
+use clap_complete::aot::{Generator, Shell, generate};
 use itertools::Either;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 use super::ClippyCommand;
 use crate::{
-    cli::{ClippyCli, APP_NAME},
+    cli::{APP_NAME, ClippyCli},
     utils::get_config_path,
 };
 
@@ -27,7 +27,8 @@ pub struct GenCompletions {
     /// Name of the shell to generate completions for.
     #[arg(value_parser = value_parser!(LinuxShells))]
     shell: LinuxShells,
-    /// The location to output the completions file. Do not include the file_name or extention.
+    /// The location to output the completions file. Do not include the
+    /// file_name or extention.
     #[arg(short, long, value_hint(AnyPath), default_value = get_config_path("clippy", "").unwrap())]
     output: String,
 }
@@ -45,21 +46,15 @@ impl ClippyCommand for GenCompletions {
         )?;
 
         println!(
-            "Wrote completions to \n\n\t{path:?}\n\n\
-            \
-            If you did not specify an output location please move this file into your \
-            completions folder or it's contents to your completions file",
+            "Wrote completions to \n\n\t{path:?}\n\nIf you did not specify an output location please move this file \
+             into your completions folder or it's contents to your completions file",
         );
 
         Ok(())
     }
 }
 
-pub fn write_to_config(
-    shell: Shell,
-    cmd: &mut Command,
-    args: Either<&GenCompletions, &str>,
-) -> Result<String> {
+pub fn write_to_config(shell: Shell, cmd: &mut Command, args: Either<&GenCompletions, &str>) -> Result<String> {
     let config_path = match args {
         Either::Left(a) => &a.output,
         Either::Right(a) => a,

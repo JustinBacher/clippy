@@ -1,14 +1,12 @@
 use anyhow::Result;
 use camino::Utf8Path;
 use chrono::Local;
-use clippy::database::{get_db, remove_duplicates, ClipEntry, Database};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rand::{distributions::Alphanumeric, Rng};
+use clippy_daemon::database::{ClipEntry, Database, get_db, remove_duplicates};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use rand::{Rng, distributions::Alphanumeric};
 use shortcut_assert_fs::TmpFs;
 
-pub fn get_random_string() -> String {
-    rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect()
-}
+pub fn get_random_string() -> String { rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect() }
 
 fn create_and_fill_db<F>(amount: i64, func: F) -> Result<()>
 where
@@ -42,12 +40,7 @@ fn remove_dupes_old(c: &mut Criterion) {
     let amount: i64 = black_box(100);
     let dedupe_amount: i64 = black_box(10);
     c.bench_function("dupes", |b| {
-        b.iter(|| {
-            create_and_fill_db(amount, |db| {
-                remove_duplicates(db, dedupe_amount)?;
-                Ok(())
-            })
-        })
+        b.iter(|| create_and_fill_db(amount, |db| remove_duplicates(db, dedupe_amount)))
     });
 }
 
@@ -56,12 +49,7 @@ fn remove_dupes_iter(c: &mut Criterion) {
     let amount: i64 = black_box(100);
     let dedupe_amount: i64 = black_box(10);
     c.bench_function("dupes", |b| {
-        b.iter(|| {
-            create_and_fill_db(amount, |db| {
-                remove_duplicates(db, dedupe_amount)?;
-                Ok(())
-            })
-        })
+        b.iter(|| create_and_fill_db(amount, |db| remove_duplicates(db, dedupe_amount)))
     });
 }
 

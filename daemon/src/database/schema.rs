@@ -24,10 +24,10 @@ impl<T: for<'a> Deserialize<'a>> native_model::Decode<T> for Bincode {
 
 pub mod schemas {
     use anyhow::Result;
-    use native_model::{native_model, Model};
+    use native_model::{Model, native_model};
+    use x_win::get_active_window;
 
     use super::*;
-    use crate::platforms::get_active_window;
 
     pub type ClipEntry = crate::database::schema::schemas::v1::ClipEntryV1;
 
@@ -38,15 +38,11 @@ pub mod schemas {
         pub struct DateTime(pub chrono::DateTime<chrono::Local>);
 
         impl DateTime {
-            pub fn now() -> Self {
-                Self(chrono::Local::now())
-            }
+            pub fn now() -> Self { Self(chrono::Local::now()) }
         }
 
         impl From<chrono::DateTime<chrono::Local>> for DateTime {
-            fn from(date: chrono::DateTime<chrono::Local>) -> Self {
-                Self(date)
-            }
+            fn from(date: chrono::DateTime<chrono::Local>) -> Self { Self(date) }
         }
 
         impl ToKey for DateTime {
@@ -60,9 +56,7 @@ pub mod schemas {
                 )
             }
 
-            fn key_names() -> Vec<String> {
-                vec!["DateTime".to_string()]
-            }
+            fn key_names() -> Vec<String> { vec!["DateTime".to_string()] }
         }
 
         #[native_db]
@@ -80,23 +74,16 @@ pub mod schemas {
                 Self {
                     epoch: v1::DateTime::now(),
                     payload: payload.to_vec(),
-                    application: get_active_window(),
+                    application: get_active_window().map(|wininfo| wininfo.title).ok(),
                 }
             }
 
-            pub fn text(&self) -> Result<String> {
-                let str_ified = std::str::from_utf8(&self.payload)?;
+            pub fn text(&self) -> Result<String> { Ok(std::str::from_utf8(&self.payload)?.to_string()) }
 
-                Ok(str_ified.to_string())
-            }
-
-            pub fn contains(&self, maybe_query: &Option<String>) -> bool {
-                if let Some(query) = maybe_query {
-                    if self.text().is_ok_and(|text| text.contains(query)) {
-                        return true;
-                    }
+            pub fn contains(&self, query: &Option<String>) -> bool {
+                if let Some(check) = query {
+                    return self.text().is_ok_and(|text| text.contains(check));
                 }
-
                 false
             }
 

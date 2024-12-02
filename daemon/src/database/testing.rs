@@ -40,11 +40,12 @@ where
         let dummy = match fill {
             FillWith::Dupes(dupe) => dupe,
             FillWith::Random => &random_str(7),
-            FillWith::DupesRandomEnds(dupe) => match i {
-                1 => &random_str(7),
-                i if ![1, amount - 2].contains(&i) => dupe,
-                _ => &random_str(7),
-            },
+            FillWith::DupesRandomEnds(dupe) =>
+                match i {
+                    1 => &random_str(7),
+                    i if ![1, amount - 2].contains(&i) => dupe,
+                    _ => &random_str(7),
+                },
         };
 
         let tx = db.rw_transaction()?;

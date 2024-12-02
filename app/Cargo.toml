@@ -10,6 +10,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.93"
+arboard = { version = "3.4.1", features = ["wayland-data-control", "wl-clipboard-rs"] }
 bincode = { version = "2.0.0-rc.3", features = ["serde"] }
 bincode_derive = "2.0.0-rc.3"
 camino = "1"
@@ -19,6 +20,7 @@ clap_complete = "4.5"
 clippy_daemon = { path = "../daemon/" }
 derive_more = { version = "1.0.0", features = ["display"] }
 dirs = "5"
+futures = "0.3.31"
 image = "0.25"
 itertools = "0.13"
 log = "0.4"

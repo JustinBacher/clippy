@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use clippy_daemon::database::{get_db, ClipEntry, TableLen};
+use clippy_daemon::database::{ClipEntry, TableLen, get_db};
 
 use super::{ClippyCommand, GreedyInt};
 use crate::cli::ClippyCli;
