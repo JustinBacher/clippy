@@ -14,7 +14,7 @@ use clap_complete::Shell::*;
 use clap_mangen::Man;
 use clippy::{
     cli::ClippyCli,
-    commands::completions::{write_to_config, LinuxShells},
+    commands::completions::{LinuxShells, write_to_config},
 };
 use clippy_daemon::utils::config::*;
 use itertools::Either::Right;

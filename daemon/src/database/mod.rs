@@ -7,11 +7,7 @@ use anyhow::Result;
 use camino::Utf8Path;
 
 pub use crate::database::schema::{
-    Builder,
-    ClipEntry,
-    Database,
-    MODELS,
-    ToInput,
+    Builder, ClipEntry, Database, MODELS, ToInput,
     transaction::{RTransaction, RwTransaction},
 };
 pub trait TableLen<'txn, T: ToInput> {
@@ -35,7 +31,11 @@ pub fn get_db(path: &Utf8Path) -> Result<native_db::Database> {
     Ok(db)
 }
 
-pub fn remove_duplicates(db: &Database, to_remove: &Option<u64>, to_keep: &Option<u64>) -> Result<()> {
+pub fn remove_duplicates(
+    db: &Database,
+    to_remove: &Option<u64>,
+    to_keep: &Option<u64>,
+) -> Result<()> {
     let rtx = db.r_transaction()?;
     let wtx = db.rw_transaction()?;
     let cursor = rtx.scan().primary::<ClipEntry>()?;

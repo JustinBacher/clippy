@@ -47,7 +47,9 @@ impl ClippyCommand for Search {
             .all()?
             .flatten()
             .enumerate()
-            .filter(|(_, entry)| entry.contains(&self.query) & entry.was_copied_from_app(&self.application))
+            .filter(|(_, entry)| {
+                entry.contains(&self.query) & entry.was_copied_from_app(&self.application)
+            })
             .for_each(|(i, entry)| {
                 let preview = format_entry(&entry, self.preview_width, self.include_dates);
                 writeln!(out, "{i} {}", preview,).unwrap();

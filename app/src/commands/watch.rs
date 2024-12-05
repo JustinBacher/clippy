@@ -23,7 +23,9 @@ impl ClippyCommand for Watch {
 fn run_in_background(command: &str, args: &[&str]) -> Result<()> {
     Command::new(command)
         .args(args)
-        .creation_flags(winapi::um::winbase::DETACHED_PROCESS | winapi::um::winbase::CREATE_NEW_PROCESS_GROUP)
+        .creation_flags(
+            winapi::um::winbase::DETACHED_PROCESS | winapi::um::winbase::CREATE_NEW_PROCESS_GROUP,
+        )
         .spawn()?;
     Ok(())
 }

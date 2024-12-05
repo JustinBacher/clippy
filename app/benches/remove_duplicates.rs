@@ -6,7 +6,9 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use rand::{Rng, distributions::Alphanumeric};
 use shortcut_assert_fs::TmpFs;
 
-pub fn get_random_string() -> String { rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect() }
+pub fn get_random_string() -> String {
+    rand::thread_rng().sample_iter(&Alphanumeric).take(7).map(char::from).collect()
+}
 
 fn create_and_fill_db<F>(amount: i64, func: F) -> Result<()>
 where

@@ -84,7 +84,11 @@ impl Clipboard {
         for check in [self.exclude, self.include] {
             if let Some(clude) = check.as_ref() {
                 return clude.check_applications(clip).and_then(|app_check| {
-                    if app_check { Ok(app_check) } else { clude.clone().check_pattern(clip) }
+                    if app_check {
+                        Ok(app_check)
+                    } else {
+                        clude.clone().check_pattern(clip)
+                    }
                 });
             }
         }
@@ -116,7 +120,9 @@ impl Config {
         let config: Self = fs::read_to_string(path)
             .await
             .map_err(|err| anyhow!("Failed to read config file: {err}"))
-            .and_then(|content| toml::from_str(&content).map_err(|err| anyhow!("Failed to parse TOML: {err}")))
+            .and_then(|content| {
+                toml::from_str(&content).map_err(|err| anyhow!("Failed to parse TOML: {err}"))
+            })
             .unwrap();
         for board in config.clipboard.values() {
             let b = board.clone();
@@ -124,7 +130,9 @@ impl Config {
                 return Err(anyhow!("Config cannot have both include and exclude"));
             }
             if let (Some(_), Some(_)) = (board.keep_duplicates, board.remove_duplicates) {
-                return Err(anyhow!("Config cannot have both keep_duplicates and remove_duplicates"));
+                return Err(anyhow!(
+                    "Config cannot have both keep_duplicates and remove_duplicates"
+                ));
             }
         }
         Ok(config)

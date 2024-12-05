@@ -36,14 +36,18 @@ pub struct List {
 
 impl ClippyCommand for List {
     fn execute(&self, _: &ClippyCli) -> Result<()> {
-        let config =
-            executor::block_on(Config::from_file(Path::new(&get_config_path("clippy", "config.toml").unwrap())))?;
+        let config = executor::block_on(Config::from_file(Path::new(
+            &get_config_path("clippy", "config.toml").unwrap(),
+        )))?;
         let mut clipboard = self.clipboard.clone().unwrap();
         if clipboard == "primary" {
             clipboard = "default".to_string();
         }
         let Some(board) = config.clipboard.get(&clipboard) else {
-            print!("No clipboards with the name: {}", self.clipboard.as_ref().unwrap());
+            print!(
+                "No clipboards with the name: {}",
+                self.clipboard.as_ref().unwrap()
+            );
             return Ok(());
         };
         let db = get_db(Utf8Path::new(&board.db_path))?;

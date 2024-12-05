@@ -46,15 +46,20 @@ impl ClippyCommand for GenCompletions {
         )?;
 
         println!(
-            "Wrote completions to \n\n\t{path:?}\n\nIf you did not specify an output location please move this file \
-             into your completions folder or it's contents to your completions file",
+            "Wrote completions to \n\n\t{path:?}\n\nIf you did not specify an output location \
+             please move this file into your completions folder or it's contents to your \
+             completions file",
         );
 
         Ok(())
     }
 }
 
-pub fn write_to_config(shell: Shell, cmd: &mut Command, args: Either<&GenCompletions, &str>) -> Result<String> {
+pub fn write_to_config(
+    shell: Shell,
+    cmd: &mut Command,
+    args: Either<&GenCompletions, &str>,
+) -> Result<String> {
     let config_path = match args {
         Either::Left(a) => &a.output,
         Either::Right(a) => a,

@@ -54,7 +54,9 @@ pub struct GreedyParseError;
 impl Error for GreedyParseError {}
 
 impl fmt::Display for GreedyParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "Oh no, something bad went down") }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Oh no, something bad went down")
+    }
 }
 
 impl FromStr for GreedyInt {
@@ -78,7 +80,11 @@ impl FromStr for GreedyInt {
             }
         }
 
-        if has_digits { Ok(GreedyInt(result)) } else { Err(GreedyParseError) }
+        if has_digits {
+            Ok(GreedyInt(result))
+        } else {
+            Err(GreedyParseError)
+        }
     }
 }
 

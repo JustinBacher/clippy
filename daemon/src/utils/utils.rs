@@ -11,9 +11,13 @@ fn get_path(base_path: Option<PathBuf>, path: &str, name: &str) -> Option<String
     Some(Path::join(&parent, Path::new(name)).to_str()?.to_string())
 }
 
-pub fn get_config_path(path: &str, name: &str) -> Option<String> { get_path(config_dir(), path, name) }
+pub fn get_config_path(path: &str, name: &str) -> Option<String> {
+    get_path(config_dir(), path, name)
+}
 
-pub fn get_cache_path(path: &str, name: &str) -> Option<String> { get_path(cache_dir(), path, name) }
+pub fn get_cache_path(path: &str, name: &str) -> Option<String> {
+    get_path(cache_dir(), path, name)
+}
 
 use rand::{Rng, distributions::Alphanumeric};
 
