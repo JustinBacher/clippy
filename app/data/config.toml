@@ -1,0 +1,11 @@
+[general]
+polling_rate = 100
+
+[general.preview]
+width = 100
+include_dates = true
+
+[clipboard.primary]
+db_path = "/home/justin/.cache/clippy/db"
+max_size = 1000
+keep_duplicates = 10

@@ -3,30 +3,64 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use dirs::{cache_dir, config_dir};
+use anyhow::{anyhow, Result};
+use directories::ProjectDirs;
 
-fn get_path(base_path: Option<PathBuf>, path: &str, name: &str) -> Option<String> {
-    let parent = Path::join(base_path?.as_path(), Path::new(path));
-    create_dir_all(parent.to_str()?).unwrap();
-    Some(Path::join(&parent, Path::new(name)).to_str()?.to_string())
+fn get_project_dirs() -> Option<ProjectDirs> {
+    ProjectDirs::from("", "", "clippy")
 }
 
-pub fn get_config_path(path: &str, name: &str) -> Option<String> {
-    get_path(config_dir(), path, name)
+fn get_path<P>(base: &Path, path: P) -> Result<PathBuf>
+where
+    P: AsRef<Path>,
+{
+    let full_path = base.join(path);
+    let _ = create_dir_all(&full_path);
+    Ok(full_path)
 }
 
-pub fn get_cache_path(path: &str, name: &str) -> Option<String> {
-    get_path(cache_dir(), path, name)
+pub fn get_config_path<P>(name: &P) -> Result<PathBuf>
+where
+    P: AsRef<Path> + ?Sized,
+{
+    if let Some(project_dir) = get_project_dirs() {
+        get_path(project_dir.config_dir(), name)
+    } else {
+        Err(anyhow!(""))
+    }
+}
+
+pub fn get_cache_path<P>(name: &P) -> Result<PathBuf>
+where
+    P: AsRef<Path> + ?Sized,
+{
+    if let Some(project_dir) = get_project_dirs() {
+        get_path(project_dir.cache_dir(), name)
+    } else {
+        Err(anyhow!(""))
+    }
+}
+
+pub fn get_data_path<P>(name: &P) -> Result<PathBuf>
+where
+    P: AsRef<Path> + ?Sized,
+{
+    if let Some(project_dir) = get_project_dirs() {
+        get_path(project_dir.data_dir(), name)
+    } else {
+        Err(anyhow!(""))
+    }
 }
 
 #[cfg(test)]
-use rand::{Rng, distributions::Alphanumeric};
+mod test {
+    use rand::{distributions::Alphanumeric, Rng};
 
-#[cfg(test)]
-pub fn random_str(length: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(length)
-        .map(char::from)
-        .collect()
+    pub fn random_str(length: usize) -> String {
+        rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(length)
+            .map(char::from)
+            .collect()
+    }
 }

@@ -4,7 +4,7 @@ use anyhow::Result;
 use camino::Utf8Path;
 use clap::Parser;
 use clippy_daemon::{
-    database::{ClipEntry, TableLen, get_db},
+    database::{get_db, ClipEntry, TableLen},
     utils::config::Config,
 };
 use futures::executor;
@@ -37,11 +37,11 @@ pub struct List {
 impl ClippyCommand for List {
     fn execute(&self, _: &ClippyCli) -> Result<()> {
         let config = executor::block_on(Config::from_file(Path::new(
-            &get_config_path("clippy", "config.toml").unwrap(),
+            &get_config_path(Path::new("config.toml")).unwrap(),
         )))?;
         let mut clipboard = self.clipboard.clone().unwrap();
         if clipboard == "primary" {
-            clipboard = "default".to_string();
+            clipboard = String::from("default");
         }
         let Some(board) = config.clipboard.get(&clipboard) else {
             print!(
@@ -74,7 +74,7 @@ impl ClippyCommand for List {
 
 #[cfg(test)]
 mod test {
-    use clippy_daemon::database::testing::{FillWith, fill_db_and_test, get_db_contents};
+    use clippy_daemon::database::testing::{fill_db_and_test, get_db_contents, FillWith};
 
     use crate::cli::mock_cli;
 

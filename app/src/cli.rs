@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand, ValueHint::AnyPath};
 
@@ -5,14 +7,15 @@ use crate::{commands, utils::get_cache_path};
 
 #[derive(Subcommand, Debug, PartialEq)]
 pub enum Commands {
-    Store(commands::Copy),
     GenCompletions(commands::GenCompletions),
     List(commands::List),
+    Pair(commands::Pair),
     Recall(commands::Recall),
-    Search(commands::Search),
-    Wipe(commands::Wipe),
     Remove(commands::Remove),
+    Search(commands::Search),
+    Store(commands::Copy),
     Version(commands::Version),
+    Wipe(commands::Wipe),
 }
 
 pub const APP_NAME: &str = "clippy";
@@ -27,7 +30,7 @@ pub struct ClippyCli {
 
     #[arg(
         long,
-        default_value = get_cache_path("clippy", "db").unwrap(),
+        default_value = get_cache_path(Path::new("")).unwrap().as_path().to_str().unwrap().to_string(),
         value_hint(AnyPath)
     )]
     /// Path to the local database used to store previous clips

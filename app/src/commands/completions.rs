@@ -1,15 +1,15 @@
-use std::fs::File;
+use std::{fs::File, path::Path};
 
 use anyhow::Result;
-use clap::{Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath, value_parser};
-use clap_complete::aot::{Generator, Shell, generate};
+use clap::{value_parser, Command, CommandFactory, Parser, ValueEnum, ValueHint::AnyPath};
+use clap_complete::aot::{generate, Generator, Shell};
 use itertools::Either;
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 use super::ClippyCommand;
 use crate::{
-    cli::{APP_NAME, ClippyCli},
+    cli::{ClippyCli, APP_NAME},
     utils::get_config_path,
 };
 
@@ -29,7 +29,7 @@ pub struct GenCompletions {
     shell: LinuxShells,
     /// The location to output the completions file. Do not include the
     /// file_name or extention.
-    #[arg(short, long, value_hint(AnyPath), default_value = get_config_path("clippy", "").unwrap())]
+    #[arg(short, long, value_hint(AnyPath), default_value = get_config_path(Path::new("")).unwrap().as_path().to_str().unwrap().to_string())]
     output: String,
 }
 

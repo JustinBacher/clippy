@@ -23,6 +23,7 @@ fn main() -> Result<()> {
         Commands::Wipe(command) => command.execute(&args)?,
         Commands::Remove(command) => command.execute(&args)?,
         Commands::Version(command) => command.execute(&args)?,
+        Commands::Pair(command) => command.execute(&args)?,
     }
 
     Ok(())

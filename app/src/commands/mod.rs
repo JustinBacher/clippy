@@ -1,6 +1,7 @@
 pub mod completions;
 pub mod copy;
 pub mod list;
+pub mod pair;
 pub mod recall;
 pub mod remove;
 pub mod search;
@@ -15,6 +16,7 @@ pub use completions::GenCompletions;
 pub use copy::Copy;
 use derive_more::Display;
 pub use list::List;
+pub use pair::Pair;
 pub use recall::Recall;
 pub use remove::Remove;
 pub use search::Search;
@@ -35,7 +37,7 @@ pub trait ClippyCommand {
 }
 
 pub fn is_fresh_run() -> Result<bool> {
-    let config_path = get_config_path("clippy", "config.toml").unwrap();
+    let config_path = get_config_path(Path::new("config.toml")).unwrap();
     if Path::new(&config_path).exists() {
         return Ok(true);
     }
@@ -89,11 +91,15 @@ impl FromStr for GreedyInt {
 }
 
 impl From<GreedyInt> for usize {
-    fn from(data: GreedyInt) -> Self { data.0 }
+    fn from(data: GreedyInt) -> Self {
+        data.0
+    }
 }
 
 impl Sub<usize> for &GreedyInt {
     type Output = usize;
 
-    fn sub(self, other: usize) -> usize { self.0 - other }
+    fn sub(self, other: usize) -> usize {
+        self.0 - other
+    }
 }
