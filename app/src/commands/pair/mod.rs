@@ -3,6 +3,7 @@ use std::{
     io::{BufRead, BufReader},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::Path,
+    ptr::addr_of,
 };
 
 use anyhow::{anyhow, Result};
@@ -52,7 +53,7 @@ fn ipv4_to_words(ip: Ipv4Addr, words: &[String]) -> (u32, String) {
         ret.push(&words[value as usize % 335]);
         value /= 335;
     }
-    (ret.len() as u32, ret.iter().rev().join(""))
+    (ret.len() as u32, ret.iter().rev().join(" "))
 }
 
 fn ipv6_to_words(ip: Ipv6Addr, words: &[String]) -> (u32, String) {
@@ -69,22 +70,16 @@ fn ipv6_to_words(ip: Ipv6Addr, words: &[String]) -> (u32, String) {
 }
 
 fn create_invite_code() -> Result<String> {
-    let seed = thread_rng().gen_range(0..NUM_ADJ_VERBS);
-    let mut rng = StdRng::seed_from_u64(seed);
+    let seed = thread_rng().gen_range(0..=NUM_ADJ_VERBS);
     let adj_verbs = &mut read_lines("adj_verbs")?;
     let (Ok(local_ip), Ok(public_ip)) = (get_local_ip(), get_public_ip()) else {
         return Err(anyhow!("Unable to retrieve public IP Address"));
     };
-    let seed_word: String;
 
-    {
-        let Some(word) = adj_verbs.choose(&mut rng) else {
-            return Err(anyhow!(""));
-        };
-        seed_word = word.to_string();
-    }
+    let seed_adj_verbs = adj_verbs.clone();
+    let seed_word = seed_adj_verbs.get(seed as usize).unwrap();
 
-    adj_verbs.shuffle(&mut rng);
+    adj_verbs.shuffle(&mut StdRng::seed_from_u64(seed as u64));
 
     let (local_words_count, local_words) = match local_ip {
         IpAddr::V4(ip) => ipv4_to_words(ip, adj_verbs),
@@ -96,10 +91,12 @@ fn create_invite_code() -> Result<String> {
         IpAddr::V6(ip) => ipv6_to_words(ip, adj_verbs),
     };
 
+    let shuffled_nouns = &mut read_lines("nouns")?;
+    shuffled_nouns.shuffle(&mut StdRng::seed_from_u64(seed as u64));
+
     Ok(format!(
         "{seed_word} {local_words} {public_words} {} {}",
-        adj_verbs[local_words_count as usize],
-        read_lines("nouns")?[public_words_count as usize],
+        adj_verbs[local_words_count as usize], shuffled_nouns[public_words_count as usize],
     ))
 }
 
@@ -111,7 +108,7 @@ struct Code {
 
 fn get_index(needle: &str, haystack: &[String]) -> Option<usize> {
     for (i, straw) in haystack.iter().enumerate() {
-        if straw.to_owned().eq(needle) {
+        if straw.eq(needle) {
             return Some(i);
         }
     }
@@ -119,33 +116,27 @@ fn get_index(needle: &str, haystack: &[String]) -> Option<usize> {
 }
 
 fn words_to_ipv4(octet_words: &[&str], word_listing: &[String]) -> Ipv4Addr {
-    let bits = (0..4).rev().fold(
-        octet_words
-            .iter()
-            .filter_map(|word| get_index(word, word_listing))
-            .fold(0u32, |acc, idx| acc * 335 + idx as u32),
-        |acc, i| ((acc >> (i * 8)) & 0xFF),
-    );
+    let bits = octet_words
+        .iter()
+        .filter_map(|word| get_index(word, word_listing))
+        .fold(0u32, |acc, idx| acc * 335 + idx as u32);
 
     Ipv4Addr::from_bits(bits)
 }
 
 fn words_to_ipv6(octet_words: &[&str], word_listing: &[String]) -> Ipv6Addr {
-    let bits = (0..8).rev().fold(
-        octet_words
-            .iter()
-            .filter_map(|word| get_index(word, word_listing))
-            .fold(0u128, |acc, idx| acc * 335 + idx as u128),
-        |acc, i| ((acc >> (i * 8)) & 0xFFFF),
-    );
+    let bits = octet_words
+        .iter()
+        .filter_map(|word| get_index(word, word_listing))
+        .fold(0u128, |acc, idx| acc * 335 + idx as u128);
 
     Ipv6Addr::from_bits(bits)
 }
 
 fn words_to_ip(octet_words: &[&str], word_listing: &[String]) -> Result<IpAddr> {
     match octet_words.len() {
-        _len @ 3..4 => Ok(IpAddr::from(words_to_ipv4(octet_words, word_listing))),
-        _len @ 11..16 => Ok(IpAddr::from(words_to_ipv4(octet_words, word_listing))),
+        _len @ 3..=4 => Ok(IpAddr::from(words_to_ipv4(octet_words, word_listing))),
+        _len @ 11..=16 => Ok(IpAddr::from(words_to_ipv6(octet_words, word_listing))),
         _ => Err(anyhow!("Unable to decypher code")),
     }
 }
@@ -157,26 +148,19 @@ fn decrypt_code(code: &str) -> Result<Code> {
     }
 
     let adj_verbs = &mut read_lines("adj_verbs")?;
-    let seed_word = words[0];
-    let mut seed: Option<u64> = None;
-
-    let seed_adj_verbs = adj_verbs.to_owned();
-    for (i, adverb) in seed_adj_verbs.iter().enumerate() {
-        if seed_word == adverb {
-            seed = Some(i as u64);
-            break;
-        }
-    }
-
-    if seed.is_none() {
+    let Some(seed) = get_index(words[0], adj_verbs) else {
         return Err(anyhow!("Incorrect Code"));
-    }
+    };
 
-    adj_verbs.shuffle(&mut StdRng::seed_from_u64(seed.unwrap()));
+    adj_verbs.shuffle(&mut StdRng::seed_from_u64(seed as u64));
 
-    let local_len = get_index(words.iter().rev().nth(1).unwrap(), adj_verbs).unwrap();
+    let shuffled_nouns = &mut read_lines("nouns")?;
+    shuffled_nouns.shuffle(&mut StdRng::seed_from_u64(seed as u64));
+
+    let local_len = get_index(words[words.len() - 2], adj_verbs).unwrap();
+    let public_len = get_index(words[words.len() - 1], shuffled_nouns).unwrap();
     let local_words = &words[1..local_len + 1];
-    let public_words = &words[local_len + 1..words.len() - 2];
+    let public_words = &words[local_len + 1..local_len + public_len + 1];
 
     Ok(Code {
         local_ip: words_to_ip(local_words, adj_verbs)?,
