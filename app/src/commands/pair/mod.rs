@@ -8,36 +8,17 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
-use local_ip_address::local_ip as get_local_ip;
 use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, Rng, SeedableRng};
-use reqwest::blocking::get;
 
 #[allow(clippy::module_inception)]
 pub mod pair;
 use crate::utils::get_data_path;
+use clippy_daemon::utils::ip::{get_local_ip, get_public_ip};
 pub use pair::*;
 
 const NUM_ADJ_VERBS: u64 = 3248;
 
-fn get_public_ip() -> Result<IpAddr> {
-    let urls = [
-        "https://api.ipify.org",
-        "https://ifconfig.me",
-        "https://ipinfo.io/ip",
-        "https://iprs.fly.dev",
-    ];
-
-    for url in urls.into_iter() {
-        if let Ok(response) = get(url).and_then(|r| r.text()) {
-            if let Ok(ip) = response.parse::<IpAddr>() {
-                return Ok(ip);
-            }
-        }
-    }
-    Err(anyhow!("Unable to obtain public IP Address."))
-}
-
-fn read_lines(filename: &str) -> Result<Vec<String>> {
+fn read_words(filename: &str) -> Result<Vec<String>> {
     let path = get_data_path(&Path::new("words").join(format!("{}.txt", filename)))?;
     let reader = BufReader::new(File::open(path)?).lines();
     Ok(reader.into_iter().map_while(Result::ok).collect())
@@ -71,7 +52,7 @@ fn ipv6_to_words(ip: Ipv6Addr, words: &[String]) -> (u32, String) {
 
 fn create_invite_code() -> Result<String> {
     let seed = thread_rng().gen_range(0..=NUM_ADJ_VERBS);
-    let adj_verbs = &mut read_lines("adj_verbs")?;
+    let adj_verbs = &mut read_words("adj_verbs")?;
     let (Ok(local_ip), Ok(public_ip)) = (get_local_ip(), get_public_ip()) else {
         return Err(anyhow!("Unable to retrieve public IP Address"));
     };
@@ -91,7 +72,7 @@ fn create_invite_code() -> Result<String> {
         IpAddr::V6(ip) => ipv6_to_words(ip, adj_verbs),
     };
 
-    let shuffled_nouns = &mut read_lines("nouns")?;
+    let shuffled_nouns = &mut read_words("nouns")?;
     shuffled_nouns.shuffle(&mut StdRng::seed_from_u64(seed as u64));
 
     Ok(format!(
@@ -147,14 +128,14 @@ fn decrypt_code(code: &str) -> Result<Code> {
         return Err(anyhow!("Incorrect Code"));
     }
 
-    let adj_verbs = &mut read_lines("adj_verbs")?;
+    let adj_verbs = &mut read_words("adj_verbs")?;
     let Some(seed) = get_index(words[0], adj_verbs) else {
         return Err(anyhow!("Incorrect Code"));
     };
 
     adj_verbs.shuffle(&mut StdRng::seed_from_u64(seed as u64));
 
-    let shuffled_nouns = &mut read_lines("nouns")?;
+    let shuffled_nouns = &mut read_words("nouns")?;
     shuffled_nouns.shuffle(&mut StdRng::seed_from_u64(seed as u64));
 
     let local_len = get_index(words[words.len() - 2], adj_verbs).unwrap();

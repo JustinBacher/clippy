@@ -1,13 +1,14 @@
 use std::{env, process::Command};
 
 pub mod async_helpers;
+pub mod clipboard;
 pub mod config;
+pub mod ip;
 #[allow(clippy::module_inception)]
 pub mod utils;
 use x_win::get_active_window;
 
 pub use utils::*;
-pub mod clipboard;
 
 pub fn get_focused_window() -> Option<String> {
     if env::var("XDG_SESSION_DESKTOP").unwrap_or_default().contains("Hyprland") {

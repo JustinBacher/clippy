@@ -4,7 +4,7 @@ use anyhow::Result;
 use camino::Utf8Path;
 use clap::Parser;
 use clippy_daemon::{
-    database::{get_db, ClipEntry, TableLen},
+    database::clipboard::{get_db, ClipEntry, TableLen},
     utils::config::Config,
 };
 use futures::executor;

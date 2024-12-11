@@ -6,7 +6,7 @@ use camino::Utf8Path;
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    database::{ensure_db_size, get_db, remove_duplicates, ClipEntry},
+    database::clipboard::{ensure_db_size, get_db, remove_duplicates, ClipEntry},
     utils::{config::Config, get_cache_path},
 };
 
@@ -26,7 +26,7 @@ pub async fn listen_to_clipboard(config: Arc<Mutex<Config>>) -> Result<()> {
             .unwrap();
 
         if previous_content != new_content {
-            respond_to_clips(
+            respond_to_clip(
                 Arc::clone(&config),
                 ClipEntry::new(previous_content.as_bytes()),
             )
@@ -46,16 +46,19 @@ pub async fn listen_to_clipboard(config: Arc<Mutex<Config>>) -> Result<()> {
     }
 }
 
-async fn respond_to_clips(config: Arc<Mutex<Config>>, clip: ClipEntry) -> Result<()> {
-    let db_path = get_cache_path("clippy", "db").unwrap();
-    let db = get_db(Utf8Path::new(&db_path))?;
-
+pub async fn respond_to_clip(config: Arc<Mutex<Config>>, clip: ClipEntry) -> Result<()> {
     let config_guard = config.lock().unwrap();
     let config_clipboard = &config_guard.clipboard;
-    for board in config_clipboard.values() {
+    for (mut name, board) in config_clipboard.iter() {
+        if name == "default" {
+            name = &"primary".to_string();
+        }
+
+        let db_path = get_cache_path(name)?;
+        let db = get_db(Utf8Path::new(db_path.as_path().to_str().unwrap()))?;
         let tx = db.rw_transaction()?;
         {
-            if board.clone().can_store(&clip).unwrap() {
+            if board.can_store(&clip).unwrap() {
                 println!("Stored: {:?}", clip);
                 tx.insert(clip.clone())?;
                 remove_duplicates(&db, &board.remove_duplicates, &board.keep_duplicates)?;

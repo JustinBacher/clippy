@@ -4,10 +4,13 @@ use std::{
 };
 
 use anyhow::Result;
-use clippy_daemon::utils::{
-    clipboard::listen_to_clipboard,
-    config::{Config, watch_config},
-    get_config_path,
+use clippy_daemon::{
+    sync::connection,
+    utils::{
+        clipboard::listen_to_clipboard,
+        config::{watch_config, Config},
+        get_config_path,
+    },
 };
 use tokio::task;
 
