@@ -121,7 +121,7 @@ pub mod schemas {
 
     pub type Node = v1::NodeV1;
 
-    pub mod v1 {
+    mod v1 {
         use super::*;
         use native_model::Model;
 
@@ -138,6 +138,7 @@ pub mod schemas {
         }
 
         impl NodeV1 {
+            #[allow(clippy::new_without_default)]
             pub fn new() -> Self {
                 Self {
                     device_id: DeviceIdentifier::new().unwrap(),

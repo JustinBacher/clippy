@@ -14,8 +14,8 @@ fn get_path<P>(base: &Path, path: P) -> Result<PathBuf>
 where
     P: AsRef<Path>,
 {
+    let _ = create_dir_all(base);
     let full_path = base.join(path);
-    let _ = create_dir_all(&full_path);
     Ok(full_path)
 }
 

@@ -33,6 +33,7 @@ local-ip-address = "0.6.3"
 log = "0.4"
 mac_address = "1.1.7"
 mdns = "3.0.0"
+minreq = { version = "2.13.0", features = ["https"] }
 native_db = "0.8.1"
 native_model = "0.4.20"
 notify = "7.0.0"

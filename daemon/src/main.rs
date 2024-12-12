@@ -1,26 +1,29 @@
-use std::{
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
 use clippy_daemon::{
-    sync::connection,
+    sync::connection::DistributedHashNetwork,
     utils::{
         clipboard::listen_to_clipboard,
         config::{watch_config, Config},
         get_config_path,
     },
 };
-use tokio::task;
+use tokio::{sync::Mutex, task};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config_path = get_config_path("clippy", "config.toml").unwrap();
+    let config_path = get_config_path("config.toml").unwrap();
     let config = Arc::new(Mutex::new(
         Config::from_file(Path::new(&config_path)).await?,
     ));
-    let watcher_task = task::spawn(watch_config(config_path, Arc::clone(&config)));
+    let watcher_task = task::spawn(watch_config(
+        config_path.to_string_lossy().to_string(),
+        Arc::clone(&config),
+    ));
+
+    let dht = DistributedHashNetwork::new(config.clone()).await?;
+    dht.start_server().await?;
 
     listen_to_clipboard(config).await?;
 

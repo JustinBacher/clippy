@@ -1,18 +1,18 @@
 use std::{
     collections::HashMap,
     path::Path,
-    sync::{Arc, Mutex, mpsc::channel},
+    sync::{mpsc::channel, Arc},
 };
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use log::debug;
-use notify::{Event, EventKind, RecursiveMode, Watcher, event::ModifyKind, recommended_watcher};
+use notify::{event::ModifyKind, recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tokio::fs;
+use tokio::{fs, sync::Mutex};
 
 use super::get_cache_path;
-use crate::database::ClipEntry;
+use crate::database::clipboard::ClipEntry;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Preview {
@@ -99,7 +99,7 @@ impl Clipboard {
 impl Default for Clipboard {
     fn default() -> Self {
         Self {
-            db_path: get_cache_path("clippy", "db").unwrap(),
+            db_path: get_cache_path("db").unwrap().to_string_lossy().to_string(),
             max_size: Some(1_000),
             keep_duplicates: Some(10),
             remove_duplicates: Some(0),
@@ -163,7 +163,7 @@ pub async fn watch_config(path: String, config: Arc<Mutex<Config>>) -> Result<()
             let new_config = Config::from_file(Path::new(&path))
                 .await
                 .map_err(|e| anyhow!("Found malformed config format. {e}"))?;
-            let mut config_guard = config.lock().unwrap();
+            let mut config_guard = config.lock().await;
 
             *config_guard = new_config;
 

@@ -21,9 +21,9 @@ pub mod schemas {
     use anyhow::Result;
     use native_model::{native_model, Model};
 
-    pub type ClipEntry = crate::database::clipboard::schemas::v1::ClipEntryV1;
+    pub type ClipEntry = v1::ClipEntryV1;
 
-    pub(super) mod v1 {
+    mod v1 {
         use super::*;
 
         #[native_db]
@@ -74,7 +74,7 @@ pub mod schemas {
 
 pub static MODELS: Lazy<Models> = Lazy::new(|| {
     let mut models = Models::new();
-    models.define::<schemas::ClipEntry>().unwrap();
+    models.define::<ClipEntry>().unwrap();
     models
 });
 
@@ -82,14 +82,14 @@ pub trait TableLen<'txn, T: ToInput> {
     fn length(&self) -> Result<u64>;
 }
 
-impl<'txn> TableLen<'txn, schemas::ClipEntry> for RTransaction<'txn> {
+impl<'txn> TableLen<'txn, ClipEntry> for RTransaction<'txn> {
     fn length(&self) -> Result<u64> {
-        Ok(self.len().primary::<schemas::ClipEntry>()?)
+        Ok(self.len().primary::<ClipEntry>()?)
     }
 }
-impl<'txn> TableLen<'txn, schemas::ClipEntry> for RwTransaction<'txn> {
+impl<'txn> TableLen<'txn, ClipEntry> for RwTransaction<'txn> {
     fn length(&self) -> Result<u64> {
-        Ok(self.len().primary::<schemas::ClipEntry>()?)
+        Ok(self.len().primary::<ClipEntry>()?)
     }
 }
 
@@ -97,7 +97,7 @@ pub fn get_db(path: &Utf8Path) -> Result<native_db::Database> {
     let db = DatabaseBuilder::new().create(&MODELS, path)?;
     let tx = db.rw_transaction()?;
 
-    tx.migrate::<schemas::ClipEntry>()?;
+    tx.migrate::<ClipEntry>()?;
     tx.commit()?;
 
     Ok(db)
@@ -110,12 +110,12 @@ pub fn remove_duplicates(
 ) -> Result<()> {
     let rtx = db.r_transaction()?;
     let wtx = db.rw_transaction()?;
-    let cursor = rtx.scan().primary::<schemas::ClipEntry>()?;
+    let cursor = rtx.scan().primary::<ClipEntry>()?;
     let seen = &mut HashSet::<Vec<u8>>::new();
     let amount: usize;
 
     // I'm using Box dyn to save myself a bunch of repetitive if statements
-    let mut filtered: Box<dyn Iterator<Item = schemas::ClipEntry>> = {
+    let mut filtered: Box<dyn Iterator<Item = ClipEntry>> = {
         if let Some(remove_amount) = to_remove {
             amount = *remove_amount as usize;
             Box::new(cursor.all()?.flatten())
@@ -152,7 +152,7 @@ pub fn ensure_db_size(db: &Database, limit: &u64) -> Result<()> {
     let amount = limit - len;
 
     tx.scan()
-        .primary::<schemas::ClipEntry>()?
+        .primary::<ClipEntry>()?
         .all()?
         .take(amount as usize)
         .flatten()
@@ -203,7 +203,7 @@ pub mod test {
         fill_db_and_test(FillWith::DupesRandomEnds(dupe), 20, |db, before| {
             remove_duplicates(db, &Some(0), &None)?;
             let tx = db.r_transaction()?;
-            let it = tx.scan().primary::<schemas::ClipEntry>()?;
+            let it = tx.scan().primary::<ClipEntry>()?;
             let mut cursor = it.all()?;
 
             let a_first = cursor.next().unwrap()?.payload;

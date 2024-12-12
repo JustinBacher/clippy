@@ -3,7 +3,6 @@ use std::{
     io::{BufRead, BufReader},
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     path::Path,
-    ptr::addr_of,
 };
 
 use anyhow::{anyhow, Result};

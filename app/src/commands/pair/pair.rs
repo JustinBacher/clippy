@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use promkit::preset::confirm::Confirm;
 
 use super::{create_invite_code, get_local_ip};
 use crate::{

@@ -1,8 +1,8 @@
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use anyhow::Result;
 use clap::Parser;
-use clippy_daemon::database::{ClipEntry, TableLen, get_db};
+use clippy_daemon::database::clipboard::{get_db, ClipEntry, TableLen};
 
 use super::ClippyCommand;
 use crate::{cli::ClippyCli, utils::formatting::format_entry};

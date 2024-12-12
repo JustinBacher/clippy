@@ -1,10 +1,12 @@
 extern crate shortcut_assert_fs;
+
+use anyhow::Result;
+use camino::Utf8Path;
 use itertools::Itertools;
 use shortcut_assert_fs::TmpFs;
 
-use super::*;
 use crate::{
-    database::clipboard::{ClipEntry, Database},
+    database::clipboard::{get_db, ClipEntry, Database},
     utils::random_str,
 };
 

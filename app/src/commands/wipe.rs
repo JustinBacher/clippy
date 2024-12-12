@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use clippy_daemon::database::get_db;
+use clippy_daemon::database::clipboard::get_db;
 
 use super::ClippyCommand;
 use crate::cli::ClippyCli;
