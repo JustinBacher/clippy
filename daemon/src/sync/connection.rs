@@ -1,10 +1,12 @@
+use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use tokio::{
-    io::{AsyncReadExt, BufReader},
-    net::TcpListener,
+    io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
+    net::TcpStream,
     sync::{mpsc, Mutex},
 };
 
@@ -12,78 +14,60 @@ use super::utils::NodeManager;
 use super::*;
 use crate::{
     database::{clipboard::ClipEntry, node::Node},
-    utils::{clipboard::respond_to_clip, config::Config},
+    utils::{clipboard::respond_to_clip, config::Config, utils::get_cache_path},
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-enum NodeMessage {
+pub enum NodeMessage {
     Put(ClipEntry),
-    Get(String),
     GetResponse(Option<ClipEntry>),
     JoinNetwork(Node),
 }
 
-async fn listen(stream: Arc<TcpListener>) {
-    match stream.accept().await {
-        Ok((socket, _)) => {
-            tokio::spawn(async move {
-                let mut buffer = Vec::new();
-
-                if let Err(e) = BufReader::new(socket).read_buf(&mut buffer).await {
-                    eprintln!("Error reading socket: {e}")
-                } else {
-                    println!("Received message: {:?}", String::from_utf8_lossy(&buffer))
-                }
-            });
-        },
-        Err(e) => eprintln!("Error accepting connection: {e}"),
-    }
-}
-
 #[derive(Clone)]
-pub struct DistributedHashNetwork<'a> {
+pub struct DistributedHashNetwork {
     local_node: Node,
-    node_manager: NodeManager<'a>,
+    node_manager: NodeManager,
     config: Arc<Mutex<Config>>,
     message_tx: mpsc::Sender<NodeMessage>,
+    message_rx: Arc<Mutex<mpsc::Receiver<NodeMessage>>>,
 }
 
-impl<'a> DistributedHashNetwork<'a> {
+impl DistributedHashNetwork {
     pub async fn new(config: Arc<Mutex<Config>>) -> Result<Self> {
-        let (message_tx, mut message_rx) = mpsc::channel(100);
+        let (message_tx, message_rx) = mpsc::channel(100);
 
-        let local_node = Node::new();
-        let node_manager = NodeManager::new()?;
-        let manager = node_manager.clone();
-        let conf = Arc::clone(&config);
+        let dhn = Self {
+            local_node: Node::new(),
+            node_manager: NodeManager::new()?,
+            config: config.clone(),
+            message_tx: message_tx.clone(),
+            message_rx: Arc::new(Mutex::new(message_rx)),
+        };
 
+        let responder = Arc::new(Mutex::new(dhn.clone()));
         tokio::spawn(async move {
-            while let Some(message) = message_rx.recv().await {
+            let this = responder.lock().await;
+            let mut rx = this.message_rx.lock().await;
+            while let Some(message) = rx.recv().await {
                 match message {
                     NodeMessage::Put(clip) => {
-                        if let Err(e) = respond_to_clip(&conf, clip).await {
-                            eprintln!("Clip entry error: {e}");
-                        }
+                        respond_to_clip(&config, clip).await.unwrap();
                     },
-                    NodeMessage::Get(_key) => {
-                        unimplemented!();
+                    NodeMessage::GetResponse(value) => {
+                        // Handle get response (could be used to implement more complex routing)
+                        if let Some(v) = value {
+                            println!("Received value: {:?}", v);
+                        }
                     },
                     NodeMessage::JoinNetwork(node) => {
-                        if let Err(e) = manager.clone().join(node) {
-                            eprintln!("Unable to perform handshake with device: {e}")
-                        }
+                        this.node_manager.join(node).unwrap();
                     },
-                    _ => {},
                 }
             }
         });
 
-        Ok(Self {
-            local_node,
-            node_manager,
-            config,
-            message_tx,
-        })
+        Ok(dhn)
     }
 
     pub async fn put(&self, clip: ClipEntry) -> Result<()> {
@@ -94,31 +78,57 @@ impl<'a> DistributedHashNetwork<'a> {
         Ok(())
     }
 
-    // Get a value from the distributed hash table
-    pub async fn get(&self, _key: String) -> Result<Option<String>> {
-        // First check local store
-
-        // If not found locally, send get message
-        self.message_tx
-            .send(NodeMessage::Get(_key))
-            .await
-            .map_err(|_| anyhow!("Failed to send put message"))?;
-
-        // In a real implementation, you'd wait for a response
-        Ok(None)
-    }
-
-    // Start the node's server to listen for incoming connections
     pub async fn start_server(&self) -> Result<()> {
         let listener = get_listener_on_available_port(self.local_node.local_ip).await?;
 
-        tokio::spawn({
-            async move {
-                loop {
-                    listen(listener.clone()).await;
+        let this = self.clone();
+        tokio::spawn(async move {
+            let mut buffer = Vec::new();
+            loop {
+                match listener.accept().await {
+                    Ok((socket, _)) => {
+                        let mut reader = BufReader::new(socket);
+
+                        let mut len_buffer = [0u8; 4];
+                        reader.read_exact(&mut len_buffer).await.unwrap();
+                        let message_len = u32::from_le_bytes(len_buffer) as usize;
+
+                        {
+                            buffer.resize(message_len, 0u8);
+                            reader.read_exact(&mut buffer).await.unwrap();
+                        }
+                        let b = &mut buffer.as_slice();
+                        let mut buf = Deserializer::new(b);
+
+                        match NodeMessage::deserialize(&mut buf) {
+                            Ok(message) => match this.message_tx.send(message).await {
+                                Ok(_) => println!("Message processed successfully"),
+                                Err(e) => eprintln!("Failed to process message: {e}"),
+                            },
+                            Err(e) => eprintln!("Failed to deserialize message: {e}"),
+                        }
+                        buffer.clear();
+                    },
+                    Err(e) => eprintln!("Error accepting connection: {e}"),
                 }
             }
         });
+
+        Ok(())
+    }
+
+    pub async fn send_clip(&self, clip: ClipEntry) -> Result<()> {
+        let message = NodeMessage::Put(clip);
+
+        for node in self.node_manager.get_nodes()?.iter() {
+            let Ok(mut stream) = node.get_stream().await else {
+                return Err(anyhow!(""));
+            };
+            let mut buffer = Vec::new();
+
+            message.serialize(&mut Serializer::new(&mut buffer))?;
+            stream.write_all(&buffer).await?;
+        }
 
         Ok(())
     }
@@ -132,13 +142,3 @@ impl<'a> DistributedHashNetwork<'a> {
         Ok(())
     }
 }
-
-// impl Clone for DistributedHashNetwork {
-//     fn clone(&self) -> Self {
-//         Self {
-//             local_node: self.local_node.clone(),
-//             known_nodes: Arc::clone(&self.known_nodes),
-//             message_tx: self.message_tx.clone(),
-//         }
-//     }
-// }

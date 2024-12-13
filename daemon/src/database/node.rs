@@ -12,6 +12,7 @@ pub use native_db::{
     Builder as DatabaseBuilder, Database, Key, KeyAttributes, Models, ToInput, ToKey,
 };
 use once_cell::sync::Lazy;
+use std::net::IpAddr;
 use whoami;
 
 use super::*;
@@ -19,6 +20,12 @@ pub use schemas::Node;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct DeviceIdentifier(String);
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+enum IpOrigin {
+    Local,
+    Public,
+}
 
 impl DeviceIdentifier {
     pub fn new() -> Result<Self> {
@@ -114,7 +121,6 @@ pub mod schemas {
     use native_db::native_db;
     use native_model::native_model;
     use serde::{Deserialize, Serialize};
-    use std::net::IpAddr;
 
     use super::*;
     use crate::utils::ip::{get_local_ip, get_public_ip};
@@ -124,6 +130,7 @@ pub mod schemas {
     mod v1 {
         use super::*;
         use native_model::Model;
+        use tokio::net::TcpStream;
 
         #[native_db]
         #[native_model(id = 1, version = 1, with = Bincode)]
@@ -134,7 +141,9 @@ pub mod schemas {
             pub name: String,
             pub local_ip: IpAddr,
             pub public_ip: IpAddr,
-            last_seen: Option<DateTime>,
+            pub last_seen: Option<DateTime>,
+            pub last_sync: Option<DateTime>,
+            last_ip: Option<IpOrigin>,
         }
 
         impl NodeV1 {
@@ -146,10 +155,44 @@ pub mod schemas {
                     local_ip: get_local_ip().unwrap(),
                     public_ip: get_public_ip().unwrap(),
                     last_seen: None,
+                    last_sync: None,
+                    last_ip: None,
                 }
             }
             pub fn is_self(&self) -> Result<bool> {
                 Ok(self.local_ip == get_local_ip()? && self.public_ip == get_public_ip()?)
+            }
+
+            async fn attempt_connection(&self, ip: IpAddr) -> Result<TcpStream> {
+                for port in [57258, 57240, 57208] {
+                    if let Ok(stream) = TcpStream::connect((ip, port)).await {
+                        return Ok(stream);
+                    }
+                }
+                Err(anyhow!(""))
+            }
+
+            pub async fn get_stream(&self) -> Result<TcpStream> {
+                match self.last_ip {
+                    Some(IpOrigin::Public) => {
+                        if let Ok(stream) = self.attempt_connection(self.local_ip).await {
+                            return Ok(stream);
+                        }
+                        if let Ok(stream) = self.attempt_connection(self.public_ip).await {
+                            return Ok(stream);
+                        }
+                        return Err(anyhow!(""));
+                    },
+                    _ => {
+                        if let Ok(stream) = self.attempt_connection(self.local_ip).await {
+                            return Ok(stream);
+                        }
+                        if let Ok(stream) = self.attempt_connection(self.public_ip).await {
+                            return Ok(stream);
+                        }
+                        return Err(anyhow!(""));
+                    },
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
@@ -10,28 +10,32 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct NodeManager<'a>(Arc<Database<'a>>);
+pub struct NodeManager;
 
-impl<'a> NodeManager<'a> {
+impl NodeManager {
     pub fn new() -> Result<Self> {
-        let db_path = get_cache_path(&Path::new("util").join("db")).unwrap();
-        let database = DatabaseBuilder::new()
-            .create(&NODE_MODEL, db_path.clone())
-            .map_err(|e| anyhow!("Could not create peer database.{db_path:?}\n{e}"))?;
-
-        let manager = Self(Arc::new(database));
-
-        Ok(manager)
+        Ok(Self {})
     }
 
+    fn get_db<'a>(&self) -> Result<Database<'a>> {
+        let db_path = get_cache_path(&Path::new("util").join("db")).unwrap();
+        let db = DatabaseBuilder::new()
+            .create(&NODE_MODEL, &db_path)
+            .map_err(|e| anyhow!("Could not create peer database.{db_path:?}\n{e}"))?;
+
+        Ok(db)
+    }
     pub fn get_nodes(&self) -> Result<Vec<Node>> {
-        let tx = self.0.r_transaction()?;
+        let db = self.get_db()?;
+        let tx = db.r_transaction()?;
         Ok(tx.scan().primary::<Node>()?.all()?.flatten().collect_vec())
     }
 
     pub fn join(&self, node: Node) -> Result<()> {
         if !self.get_nodes()?.contains(&node) {
-            let tx = self.0.rw_transaction()?;
+            let db = self.get_db()?;
+            let tx = db.rw_transaction()?;
+
             tx.insert(node)?;
             tx.commit()?;
         }
