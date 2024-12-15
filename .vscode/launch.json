@@ -18,11 +18,9 @@
         {
             "type": "codelldb",
             "request": "launch",
-            "name": "Debug list",
-            "program": "${workspaceFolder}/target/debug/clippy",
-            "args": [
-                "list"
-            ],
+            "name": "Debug daemon",
+            "program": "${workspaceFolder}/target/debug/clippy_daemon",
+            "args": [],
             "cwd": "${workspaceFolder}",
             "terminal": "integrated"
         }

@@ -18,7 +18,6 @@ pub fn get_focused_window() -> Option<String> {
             return None;
         }
 
-        // Parse the output for the window title
         let output_str = String::from_utf8(output.stdout).unwrap();
         for mut line in output_str.lines() {
             line = line.trim();

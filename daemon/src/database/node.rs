@@ -3,28 +3,45 @@ use std::process::Command;
 
 use std::fs;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use blake3::Hasher;
+use derive_more::derive::Display;
+use itertools::Itertools;
 use mac_address::get_mac_address;
 pub use native_db::{
-    native_db,
+    Builder as DatabaseBuilder, Database, Key, KeyAttributes, Models, ToInput, ToKey, native_db,
     transaction::{RTransaction, RwTransaction},
-    Builder as DatabaseBuilder, Database, Key, KeyAttributes, Models, ToInput, ToKey,
 };
 use once_cell::sync::Lazy;
+use rmp_serde::Serializer;
 use std::net::IpAddr;
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 use whoami;
 
 use super::*;
+use crate::{
+    database::clipboard::ClipEntry,
+    prelude::DEFAULT_PORTS,
+    sync::utils::get_db,
+    utils::ip::{get_local_ip, get_public_ip},
+};
 pub use schemas::Node;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct DeviceIdentifier(String);
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-enum IpOrigin {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display)]
+pub enum IpOrigin {
     Local,
     Public,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub enum NodeMessage {
+    NewClip(ClipEntry),
+    SyncRequest(Node),
+    SyncResponse(Vec<ClipEntry>),
+    JoinNetwork(Node),
 }
 
 impl DeviceIdentifier {
@@ -33,7 +50,7 @@ impl DeviceIdentifier {
             .or_else(|_| Self::get_mac_address())
             .or_else(|_| Self::generate_fallback_id())?;
 
-        Ok(DeviceIdentifier(id))
+        Ok(Self(id))
     }
 
     fn get_machine_id() -> Result<String> {
@@ -83,13 +100,12 @@ impl DeviceIdentifier {
 
     fn get_mac_address() -> Result<String> {
         get_mac_address()
-            .map_err(|_| "Could not get MAC address".to_string())
+            .map_err(|_| anyhow!("Could not get MAC address"))
             .and_then(|mac| {
                 if let Some(m) = mac {
-                    Ok(m.to_string())
-                } else {
-                    Err(String::default())
-                }
+                    return Ok(m.to_string());
+                };
+                Err(anyhow!("Malformed MAC address"))
             })
             .map_err(|_| anyhow!("Invalid MAC"))
     }
@@ -123,14 +139,11 @@ pub mod schemas {
     use serde::{Deserialize, Serialize};
 
     use super::*;
-    use crate::utils::ip::{get_local_ip, get_public_ip};
-
     pub type Node = v1::NodeV1;
 
     mod v1 {
         use super::*;
         use native_model::Model;
-        use tokio::net::TcpStream;
 
         #[native_db]
         #[native_model(id = 1, version = 1, with = Bincode)]
@@ -143,58 +156,102 @@ pub mod schemas {
             pub public_ip: IpAddr,
             pub last_seen: Option<DateTime>,
             pub last_sync: Option<DateTime>,
-            last_ip: Option<IpOrigin>,
+            pub last_ip: Option<IpOrigin>,
         }
+    }
+}
 
-        impl NodeV1 {
-            #[allow(clippy::new_without_default)]
-            pub fn new() -> Self {
-                Self {
-                    device_id: DeviceIdentifier::new().unwrap(),
-                    name: whoami::fallible::hostname().unwrap(),
-                    local_ip: get_local_ip().unwrap(),
-                    public_ip: get_public_ip().unwrap(),
-                    last_seen: None,
-                    last_sync: None,
-                    last_ip: None,
+impl Node {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            device_id: DeviceIdentifier::new().unwrap(),
+            name: whoami::fallible::hostname().unwrap(),
+            local_ip: get_local_ip().unwrap(),
+            public_ip: get_public_ip().unwrap(),
+            last_seen: None,
+            last_sync: None,
+            last_ip: None,
+        }
+    }
+    pub fn is_self(&self) -> Result<bool> {
+        Ok(self.local_ip == get_local_ip()? && self.public_ip == get_public_ip()?)
+    }
+
+    async fn attempt_connection(&self, ip: IpAddr) -> Result<TcpStream> {
+        for port in DEFAULT_PORTS.iter() {
+            if let Ok(stream) = TcpStream::connect((ip, *port)).await {
+                return Ok(stream);
+            }
+        }
+        Err(anyhow!(""))
+    }
+
+    pub async fn get_stream(&self) -> Result<TcpStream> {
+        match self.last_ip {
+            Some(IpOrigin::Public) => {
+                if let Ok(stream) = self.attempt_connection(self.local_ip).await {
+                    return Ok(stream);
                 }
-            }
-            pub fn is_self(&self) -> Result<bool> {
-                Ok(self.local_ip == get_local_ip()? && self.public_ip == get_public_ip()?)
-            }
-
-            async fn attempt_connection(&self, ip: IpAddr) -> Result<TcpStream> {
-                for port in [57258, 57240, 57208] {
-                    if let Ok(stream) = TcpStream::connect((ip, port)).await {
-                        return Ok(stream);
-                    }
+                if let Ok(stream) = self.attempt_connection(self.public_ip).await {
+                    return Ok(stream);
                 }
                 Err(anyhow!(""))
-            }
-
-            pub async fn get_stream(&self) -> Result<TcpStream> {
-                match self.last_ip {
-                    Some(IpOrigin::Public) => {
-                        if let Ok(stream) = self.attempt_connection(self.local_ip).await {
-                            return Ok(stream);
-                        }
-                        if let Ok(stream) = self.attempt_connection(self.public_ip).await {
-                            return Ok(stream);
-                        }
-                        return Err(anyhow!(""));
-                    },
-                    _ => {
-                        if let Ok(stream) = self.attempt_connection(self.local_ip).await {
-                            return Ok(stream);
-                        }
-                        if let Ok(stream) = self.attempt_connection(self.public_ip).await {
-                            return Ok(stream);
-                        }
-                        return Err(anyhow!(""));
-                    },
+            },
+            Some(IpOrigin::Local) | None => {
+                if let Ok(stream) = self.attempt_connection(self.local_ip).await {
+                    return Ok(stream);
                 }
-            }
+                if let Ok(stream) = self.attempt_connection(self.public_ip).await {
+                    return Ok(stream);
+                }
+                Err(anyhow!(""))
+            },
         }
+    }
+
+    pub async fn send_clip(&self, clip: ClipEntry) -> Result<()> {
+        let message = NodeMessage::NewClip(clip);
+
+        let Ok(mut stream) = self.get_stream().await else {
+            return Err(anyhow!(""));
+        };
+        let mut buffer = Vec::new();
+
+        message.serialize(&mut Serializer::new(&mut buffer))?;
+        stream.write_all(&buffer).await?;
+
+        Ok(())
+    }
+
+    pub async fn send_clips<'a>(&self, clips: Vec<ClipEntry>) -> Result<()> {
+        let Ok(mut stream) = self.get_stream().await else {
+            return Err(anyhow!(""));
+        };
+        let mut buffer = Vec::new();
+
+        clips.serialize(&mut Serializer::new(&mut buffer))?;
+        stream.write_all(&buffer).await?;
+
+        Ok(())
+    }
+
+    pub async fn sync(&self) -> Result<()> {
+        let last_sync = self.last_sync;
+        let db = get_db()?;
+        let tx = db.r_transaction()?;
+
+        let clips = tx
+            .scan()
+            .primary::<ClipEntry>()?
+            .all()?
+            .flatten()
+            .filter(|entry| last_sync.is_some_and(|last_sync| entry.epoch > last_sync))
+            .collect_vec();
+        if let Err(e) = self.send_clips(clips).await {
+            eprintln!("Unable to sync with node: {self:?}: {e}");
+        }
+        Ok(())
     }
 }
 

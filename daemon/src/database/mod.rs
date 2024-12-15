@@ -2,7 +2,10 @@ pub mod clipboard;
 pub mod node;
 pub mod testing;
 
+use std::cmp::Ord;
+
 use bincode;
+use derive_more::derive::Display;
 use native_db::{Key, ToKey};
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +27,9 @@ impl<T: for<'a> Deserialize<'a>> native_model::Decode<T> for Bincode {
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Hash, Copy)]
+#[derive(
+    Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Hash, Copy, PartialOrd, Ord, Display,
+)]
 pub struct DateTime(pub chrono::DateTime<chrono::Local>);
 
 impl DateTime {

@@ -3,31 +3,30 @@ use std::collections::HashSet;
 use anyhow::Result;
 use camino::Utf8Path;
 pub use native_db::{
-    native_db,
+    Builder as DatabaseBuilder, Database, Models, ToInput, ToKey, native_db,
     transaction::{RTransaction, RwTransaction},
-    Builder as DatabaseBuilder, Database, Key, Models, ToInput, ToKey,
 };
+use native_model::{Model, native_model};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::*;
+use super::Bincode;
+use super::DateTime;
+#[cfg(target_os = "linux")]
+use crate::utils::get_focused_window;
 pub use schemas::ClipEntry;
 
 pub mod schemas {
     use super::*;
-    #[cfg(target_os = "linux")]
-    use crate::utils::get_focused_window;
-    use anyhow::Result;
-    use native_model::{native_model, Model};
 
     pub type ClipEntry = v1::ClipEntryV1;
 
     mod v1 {
         use super::*;
 
-        #[native_db]
         #[native_model(id = 1, version = 1, with = Bincode)]
+        #[native_db]
         #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Hash, Clone)]
         pub struct ClipEntryV1 {
             #[primary_key]
@@ -37,38 +36,38 @@ pub mod schemas {
             pub payload: Vec<u8>,
             pub application: Option<String>,
         }
+    }
+}
 
-        impl ClipEntryV1 {
-            pub fn new(payload: &[u8]) -> Self {
-                Self {
-                    id: Uuid::now_v7().to_u128_le(),
-                    epoch: v1::DateTime::now(),
-                    payload: payload.to_vec(),
-                    application: get_focused_window(),
-                }
-            }
+impl ClipEntry {
+    pub fn new(payload: &[u8]) -> Self {
+        Self {
+            id: Uuid::now_v7().to_u128_le(),
+            epoch: DateTime::now(),
+            payload: payload.to_vec(),
+            application: get_focused_window(),
+        }
+    }
 
-            pub fn text(&self) -> Result<String> {
-                Ok(std::str::from_utf8(&self.payload)?.to_string())
-            }
+    pub fn text(&self) -> Result<String> {
+        Ok(std::str::from_utf8(&self.payload)?.to_string())
+    }
 
-            pub fn contains(&self, query: &Option<String>) -> bool {
-                if let Some(check) = query {
-                    return self.text().is_ok_and(|text| text.contains(check));
-                }
-                false
-            }
+    pub fn contains(&self, query: &Option<String>) -> bool {
+        if let Some(check) = query {
+            return self.text().is_ok_and(|text| text.contains(check));
+        }
+        false
+    }
 
-            pub fn was_copied_from_app(&self, maybe_title: &Option<String>) -> bool {
-                if let Some(title) = maybe_title {
-                    if self.application.as_deref().unwrap_or_default().contains(title) {
-                        return true;
-                    }
-                }
-
-                false
+    pub fn was_copied_from_app(&self, maybe_title: &Option<String>) -> bool {
+        if let Some(title) = maybe_title {
+            if self.application.as_deref().unwrap_or_default().contains(title) {
+                return true;
             }
         }
+
+        false
     }
 }
 
@@ -108,8 +107,8 @@ pub fn remove_duplicates(
     to_remove: &Option<u64>,
     to_keep: &Option<u64>,
 ) -> Result<()> {
-    let rtx = db.r_transaction()?;
     let wtx = db.rw_transaction()?;
+    let rtx = db.r_transaction()?;
     let cursor = rtx.scan().primary::<ClipEntry>()?;
     let seen = &mut HashSet::<Vec<u8>>::new();
     let amount: usize;
@@ -166,7 +165,7 @@ pub fn ensure_db_size(db: &Database, limit: &u64) -> Result<()> {
 #[cfg(test)]
 pub mod test {
 
-    use crate::database::testing::{fill_db_and_test, FillWith};
+    use crate::database::testing::{FillWith, fill_db_and_test};
     use pretty_assertions::assert_eq;
 
     use super::*;

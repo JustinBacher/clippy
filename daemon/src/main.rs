@@ -1,6 +1,8 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::Result;
+use tokio::{sync::Mutex, task};
+
 use clippy_daemon::{
     sync::connection::DistributedHashNetwork,
     utils::{
@@ -9,7 +11,6 @@ use clippy_daemon::{
         get_config_path,
     },
 };
-use tokio::{sync::Mutex, task};
 
 #[tokio::main]
 async fn main() -> Result<()> {

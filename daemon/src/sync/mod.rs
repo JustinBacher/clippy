@@ -1,19 +1,16 @@
-mod utils;
+pub mod connection;
+pub mod utils;
 
-use std::{
-    net::{IpAddr, SocketAddr},
-    sync::Arc,
-};
+use std::{net::IpAddr, sync::Arc};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use tokio::net::TcpListener;
 
-pub mod connection;
+use crate::prelude::DEFAULT_PORTS;
 
 async fn get_listener_on_available_port(ip: IpAddr) -> Result<Arc<TcpListener>> {
-    for port in 53000..53100 {
-        let socket = SocketAddr::new(ip, port);
-        if let Ok(listener) = TcpListener::bind(socket).await {
+    for port in DEFAULT_PORTS {
+        if let Ok(listener) = TcpListener::bind((ip, *port)).await {
             return Ok(Arc::new(listener));
         } else {
             continue;
