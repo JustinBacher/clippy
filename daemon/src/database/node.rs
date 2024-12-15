@@ -45,12 +45,17 @@ pub enum NodeMessage {
 }
 
 impl DeviceIdentifier {
-    pub fn new() -> Result<Self> {
-        let id = Self::get_machine_id()
+    pub fn new() -> Option<Self> {
+        match Self::get_machine_id()
             .or_else(|_| Self::get_mac_address())
-            .or_else(|_| Self::generate_fallback_id())?;
-
-        Ok(Self(id))
+            .or_else(|_| Self::generate_fallback_id())
+        {
+            Ok(id) => Some(Self(id)),
+            Err(e) => {
+                eprintln!("Could not generate device ID: {e}");
+                None
+            },
+        }
     }
 
     fn get_machine_id() -> Result<String> {
@@ -150,7 +155,7 @@ pub mod schemas {
         #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Hash, Clone)]
         pub struct NodeV1 {
             #[primary_key]
-            pub device_id: DeviceIdentifier,
+            pub device_id: Option<DeviceIdentifier>,
             pub name: String,
             pub local_ip: IpAddr,
             pub public_ip: IpAddr,
@@ -165,7 +170,7 @@ impl Node {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            device_id: DeviceIdentifier::new().unwrap(),
+            device_id: Some(DeviceIdentifier::new().unwrap()),
             name: whoami::fallible::hostname().unwrap(),
             local_ip: get_local_ip().unwrap(),
             public_ip: get_public_ip().unwrap(),
@@ -174,6 +179,7 @@ impl Node {
             last_ip: None,
         }
     }
+
     pub fn is_self(&self) -> Result<bool> {
         Ok(self.local_ip == get_local_ip()? && self.public_ip == get_public_ip()?)
     }
@@ -219,6 +225,7 @@ impl Node {
         let mut buffer = Vec::new();
 
         message.serialize(&mut Serializer::new(&mut buffer))?;
+        stream.write_all(&(buffer.len() as u32).to_be_bytes()).await?;
         stream.write_all(&buffer).await?;
 
         Ok(())
@@ -231,6 +238,7 @@ impl Node {
         let mut buffer = Vec::new();
 
         clips.serialize(&mut Serializer::new(&mut buffer))?;
+        stream.write_all(&(buffer.len() as u32).to_be_bytes()).await?;
         stream.write_all(&buffer).await?;
 
         Ok(())
@@ -248,6 +256,7 @@ impl Node {
             .flatten()
             .filter(|entry| last_sync.is_some_and(|last_sync| entry.epoch > last_sync))
             .collect_vec();
+
         if let Err(e) = self.send_clips(clips).await {
             eprintln!("Unable to sync with node: {self:?}: {e}");
         }

@@ -1124,6 +1124,7 @@ dependencies = [
  "rand",
  "regex",
  "reqwest",
+ "rmp-serde",
  "serde",
  "serde_json",
  "shortcut_assert_fs",

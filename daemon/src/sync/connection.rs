@@ -85,7 +85,6 @@ impl DistributedHashNetwork {
 
         let this = self.clone();
         tokio::spawn(async move {
-            let mut buffer = Vec::new();
             loop {
                 loop {
                     let mut reader = match listener.accept().await {
@@ -95,6 +94,11 @@ impl DistributedHashNetwork {
                             break;
                         },
                     };
+                    let mut len_bytes = [0u8; 4];
+                    reader.read_exact(&mut len_bytes).await.unwrap();
+                    let len = u32::from_be_bytes(len_bytes) as usize;
+
+                    let mut buffer = vec![0u8; len];
                     reader.read_exact(&mut buffer).await.unwrap();
 
                     match NodeMessage::deserialize(&mut Deserializer::new(&*buffer)) {
@@ -104,7 +108,6 @@ impl DistributedHashNetwork {
                         },
                         Err(e) => eprint!("Failed to deserialize message: {e}."),
                     }
-                    buffer.clear();
                 }
                 sleep(Duration::from_secs(60 * 5)).await;
             }

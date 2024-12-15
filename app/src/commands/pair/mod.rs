@@ -5,9 +5,9 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use itertools::Itertools;
-use rand::{rngs::StdRng, seq::SliceRandom, thread_rng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng, seq::SliceRandom, thread_rng};
 
 #[allow(clippy::module_inception)]
 pub mod pair;
@@ -25,28 +25,28 @@ fn read_words(filename: &str) -> Result<Vec<String>> {
 
 fn ipv4_to_words(ip: Ipv4Addr, words: &[String]) -> (u32, String) {
     let mut value = ip.octets().iter().enumerate().fold(0u32, |acc, (i, &octet)| {
-        acc | (octet as u32) << (24 - i * 8)
+        acc | (octet as u32).wrapping_shl(24u32.wrapping_sub(i as u32) * 8)
     });
 
     let ret: &mut Vec<&str> = &mut vec![];
     while value > 0 {
         ret.push(&words[value as usize % 335]);
-        value /= 335;
+        value = value.wrapping_div(335);
     }
     (ret.len() as u32, ret.iter().rev().join(" "))
 }
 
 fn ipv6_to_words(ip: Ipv6Addr, words: &[String]) -> (u32, String) {
     let mut value = ip.octets().iter().enumerate().fold(0u128, |acc, (i, &octet)| {
-        acc | (octet as u128) << (24 - i * 8)
+        acc | (octet as u128).wrapping_shl(24u32.wrapping_sub(i as u32) * 8)
     });
 
     let ret: &mut Vec<&str> = &mut vec![];
     while value > 0 {
         ret.push(&words[value as usize % 335]);
-        value /= 335;
+        value = value.wrapping_div(335);
     }
-    (ret.len() as u32, ret.iter().rev().join(""))
+    (ret.len() as u32, ret.iter().rev().join(" "))
 }
 
 fn create_invite_code() -> Result<String> {
