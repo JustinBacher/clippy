@@ -1,7 +1,7 @@
 #[cfg(any(target_os = "windows", target_os = "macos"))]
 use std::process::Command;
 
-use std::fs;
+use std::{fs, net::IpAddr, path::PathBuf};
 
 use anyhow::{Result, anyhow};
 use blake3::Hasher;
@@ -14,7 +14,6 @@ pub use native_db::{
 };
 use once_cell::sync::Lazy;
 use rmp_serde::Serializer;
-use std::net::IpAddr;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 use whoami;
 
@@ -22,7 +21,7 @@ use super::*;
 use crate::{
     database::clipboard::ClipEntry,
     prelude::DEFAULT_PORTS,
-    sync::utils::get_db,
+    sync::node_manager::get_db,
     utils::ip::{get_local_ip, get_public_ip},
 };
 pub use schemas::Node;
@@ -147,6 +146,7 @@ pub mod schemas {
     pub type Node = v1::NodeV1;
 
     mod v1 {
+
         use super::*;
         use native_model::Model;
 
@@ -162,6 +162,7 @@ pub mod schemas {
             pub last_seen: Option<DateTime>,
             pub last_sync: Option<DateTime>,
             pub last_ip: Option<IpOrigin>,
+            pub cert_location: Option<PathBuf>,
         }
     }
 }
@@ -177,6 +178,7 @@ impl Node {
             last_seen: None,
             last_sync: None,
             last_ip: None,
+            cert_location: None,
         }
     }
 
@@ -216,9 +218,7 @@ impl Node {
         }
     }
 
-    pub async fn send_clip(&self, clip: ClipEntry) -> Result<()> {
-        let message = NodeMessage::NewClip(clip);
-
+    pub async fn send_message(&self, message: NodeMessage) -> Result<()> {
         let Ok(mut stream) = self.get_stream().await else {
             return Err(anyhow!(""));
         };
@@ -227,20 +227,6 @@ impl Node {
         message.serialize(&mut Serializer::new(&mut buffer))?;
         stream.write_all(&(buffer.len() as u32).to_be_bytes()).await?;
         stream.write_all(&buffer).await?;
-
-        Ok(())
-    }
-
-    pub async fn send_clips<'a>(&self, clips: Vec<ClipEntry>) -> Result<()> {
-        let Ok(mut stream) = self.get_stream().await else {
-            return Err(anyhow!(""));
-        };
-        let mut buffer = Vec::new();
-
-        clips.serialize(&mut Serializer::new(&mut buffer))?;
-        stream.write_all(&(buffer.len() as u32).to_be_bytes()).await?;
-        stream.write_all(&buffer).await?;
-
         Ok(())
     }
 
@@ -257,7 +243,7 @@ impl Node {
             .filter(|entry| last_sync.is_some_and(|last_sync| entry.epoch > last_sync))
             .collect_vec();
 
-        if let Err(e) = self.send_clips(clips).await {
+        if let Err(e) = self.send_message(NodeMessage::SyncResponse(clips)).await {
             eprintln!("Unable to sync with node: {self:?}: {e}");
         }
         Ok(())

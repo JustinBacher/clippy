@@ -1,5 +1,5 @@
 pub mod connection;
-pub mod utils;
+pub mod node_manager;
 
 use std::{net::IpAddr, sync::Arc};
 

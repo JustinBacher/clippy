@@ -23,12 +23,12 @@ impl NodeManager {
         Ok(tx.scan().primary::<Node>()?.all()?.flatten().collect_vec())
     }
 
-    pub fn join(&self, node: Node) -> Result<()> {
-        if !self.get_nodes()?.contains(&node) {
+    pub fn add_node(&self, node: &Node) -> Result<()> {
+        if !self.get_nodes()?.contains(node) {
             let db = get_db()?;
             let tx = db.rw_transaction()?;
 
-            tx.insert(node)?;
+            tx.insert(node.clone())?;
             tx.commit()?;
         }
         Ok(())

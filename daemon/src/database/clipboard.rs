@@ -2,6 +2,8 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use camino::Utf8Path;
+use chrono::Local;
+use mac_address::get_mac_address;
 pub use native_db::{
     Builder as DatabaseBuilder, Database, Models, ToInput, ToKey, native_db,
     transaction::{RTransaction, RwTransaction},
@@ -9,12 +11,10 @@ pub use native_db::{
 use native_model::{Model, native_model};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use super::Bincode;
-use super::DateTime;
 #[cfg(target_os = "linux")]
-use crate::utils::get_focused_window;
+use crate::utils::sysinfo::{get_focused_window, get_hostname, get_sys_uuid};
 pub use schemas::ClipEntry;
 
 pub mod schemas {
@@ -31,8 +31,7 @@ pub mod schemas {
         pub struct ClipEntryV1 {
             #[primary_key]
             pub id: u128,
-            #[secondary_key]
-            pub epoch: DateTime,
+            pub system_name: String,
             pub payload: Vec<u8>,
             pub application: Option<String>,
         }
@@ -40,13 +39,22 @@ pub mod schemas {
 }
 
 impl ClipEntry {
-    pub fn new(payload: &[u8]) -> Self {
-        Self {
-            id: Uuid::now_v7().to_u128_le(),
-            epoch: DateTime::now(),
+    pub fn new(payload: &[u8]) -> Result<Self> {
+        let mac = (get_mac_address()?
+            .unwrap()
+            .bytes()
+            .iter()
+            // below just puts all bytes into a u64
+            .fold(0u64, |acc, &byte| (acc << 8) | u64::from(byte)) as u128)
+            << 64u128
+            | (Local::now().timestamp_millis() as u128);
+
+        Ok(Self {
+            id: mac,
+            system_name: get_hostname().unwrap(),
             payload: payload.to_vec(),
             application: get_focused_window(),
-        }
+        })
     }
 
     pub fn text(&self) -> Result<String> {

@@ -7,7 +7,7 @@ use clippy_daemon::{
     sync::connection::DistributedHashNetwork,
     utils::{
         clipboard::listen_to_clipboard,
-        config::{watch_config, Config},
+        config::{Config, watch_config},
         get_config_path,
     },
 };
@@ -23,8 +23,8 @@ async fn main() -> Result<()> {
         Arc::clone(&config),
     ));
 
-    let dht = DistributedHashNetwork::new(config.clone()).await?;
-    dht.start_server().await?;
+    let dhn = DistributedHashNetwork::new(config.clone()).await?;
+    dhn.start_server().await?;
 
     listen_to_clipboard(config).await?;
 
